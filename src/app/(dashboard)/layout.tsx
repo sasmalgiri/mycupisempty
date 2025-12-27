@@ -1,0 +1,152 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const navItems = [
+  { href: '/dashboard', icon: '🏠', label: 'Dashboard' },
+  { href: '/subjects', icon: '📚', label: 'Subjects' },
+  { href: '/progress', icon: '📊', label: 'Progress' },
+  { href: '/achievements', icon: '🏆', label: 'Achievements' }
+];
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState({
+    name: 'Priya Sharma',
+    class: 6,
+    xp: 2450,
+    streak: 7
+  });
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-primary-50 to-secondary-50">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 lg:translate-x-0 ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        {/* Logo */}
+        <div className="p-4 border-b border-gray-100">
+          <Link href="/dashboard" className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center text-xl shadow-lg">
+              🧠
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-500 bg-clip-text text-transparent">
+              MyCupIsEmpty
+            </span>
+          </Link>
+        </div>
+
+        {/* User Info */}
+        <div className="p-4 border-b border-gray-100">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-secondary-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
+              {userProfile.name.charAt(0)}
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">{userProfile.name}</p>
+              <p className="text-sm text-gray-500">Class {userProfile.class}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1 bg-gradient-to-r from-warning-50 to-warning-100 px-3 py-2 rounded-lg text-center">
+              <p className="text-warning-600 font-bold">⭐ {userProfile.xp.toLocaleString()}</p>
+              <p className="text-xs text-warning-500">XP</p>
+            </div>
+            <div className="flex-1 bg-gradient-to-r from-error-50 to-error-100 px-3 py-2 rounded-lg text-center">
+              <p className="text-error-600 font-bold">🔥 {userProfile.streak}</p>
+              <p className="text-xs text-error-500">Streak</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="p-3">
+          {navItems.map(item => {
+            const isActive = pathname === item.href || 
+              (item.href !== '/dashboard' && pathname.startsWith(item.href));
+            
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all ${
+                  isActive 
+                    ? 'bg-primary-50 text-primary-700 font-semibold' 
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <span className="text-xl">{item.icon}</span>
+                <span>{item.label}</span>
+                {isActive && (
+                  <div className="ml-auto w-2 h-2 bg-primary-500 rounded-full"></div>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom Actions */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
+          <Link
+            href="/settings"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all"
+          >
+            <span className="text-xl">⚙️</span>
+            <span>Settings</span>
+          </Link>
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all">
+            <span className="text-xl">🚪</span>
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="lg:pl-64">
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-30 glass-effect border-b border-white/20">
+          <div className="flex items-center justify-between px-4 h-14">
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center text-lg">
+                🧠
+              </div>
+              <span className="font-bold text-gray-900">MyCupIsEmpty</span>
+            </Link>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-warning-500">⭐ {userProfile.xp}</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        {children}
+      </div>
+    </div>
+  );
+}

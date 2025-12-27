@@ -1,0 +1,238 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Crimson+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 24 95% 53%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 262 83% 58%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 24 95% 53%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 262 83% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20;
+  }
+
+  .glass-dark {
+    @apply bg-black/40 backdrop-blur-xl border border-white/10;
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary-500 to-secondary-500;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-600 to-secondary-500 bg-clip-text text-transparent;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-semibold shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 hover:-translate-y-0.5 transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all duration-200;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 outline-none transition-all duration-200;
+  }
+
+  /* Learning Style Colors */
+  .style-visual {
+    @apply bg-blue-100 text-blue-700 border-blue-200;
+  }
+
+  .style-auditory {
+    @apply bg-green-100 text-green-700 border-green-200;
+  }
+
+  .style-reading {
+    @apply bg-yellow-100 text-yellow-700 border-yellow-200;
+  }
+
+  .style-kinesthetic {
+    @apply bg-red-100 text-red-700 border-red-200;
+  }
+
+  /* Subject Cards */
+  .subject-math {
+    --subject-color: theme('colors.math');
+    --subject-bg: #EEF2FF;
+  }
+
+  .subject-science {
+    --subject-color: theme('colors.science');
+    --subject-bg: #F5F3FF;
+  }
+
+  .subject-english {
+    --subject-color: theme('colors.english');
+    --subject-bg: #FDF2F8;
+  }
+
+  .subject-hindi {
+    --subject-color: theme('colors.hindi');
+    --subject-bg: #FFF7ED;
+  }
+
+  .subject-social {
+    --subject-color: theme('colors.social');
+    --subject-bg: #F0FDFA;
+  }
+
+  /* Quiz Options */
+  .quiz-option {
+    @apply flex items-center gap-4 p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl cursor-pointer transition-all duration-200;
+  }
+
+  .quiz-option:hover {
+    @apply border-primary-300 bg-primary-50;
+  }
+
+  .quiz-option.selected {
+    @apply border-primary-500 bg-primary-50;
+  }
+
+  .quiz-option.correct {
+    @apply border-green-500 bg-green-50;
+  }
+
+  .quiz-option.wrong {
+    @apply border-red-500 bg-red-50;
+  }
+
+  /* Progress Bars */
+  .progress-bar {
+    @apply h-2 bg-gray-200 rounded-full overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full transition-all duration-500;
+  }
+
+  /* Animations */
+  .animate-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  /* Scrollbar Styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-100 rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full hover:bg-gray-400;
+  }
+
+  /* Dark scrollbar */
+  .dark-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-800;
+  }
+
+  .dark-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-600 hover:bg-gray-500;
+  }
+}
+
+/* Bloom's Taxonomy Level Badges */
+.bloom-remember { @apply bg-gray-100 text-gray-700; }
+.bloom-understand { @apply bg-blue-100 text-blue-700; }
+.bloom-apply { @apply bg-green-100 text-green-700; }
+.bloom-analyze { @apply bg-yellow-100 text-yellow-700; }
+.bloom-evaluate { @apply bg-orange-100 text-orange-700; }
+.bloom-create { @apply bg-purple-100 text-purple-700; }
+
+/* XP and Streak Badges */
+.xp-badge {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-100 to-yellow-50 rounded-full font-bold text-yellow-600;
+}
+
+.streak-badge {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-red-100 to-red-50 rounded-full font-bold text-red-600;
+}
+
+/* Confetti Animation */
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  animation: confetti 1s ease-out forwards;
+}
+
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-200px) rotate(720deg);
+    opacity: 0;
+  }
+}
