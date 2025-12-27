@@ -162,7 +162,8 @@ export default function AssessmentPage() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        await supabase.from('learning_styles').upsert({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from('learning_styles') as any).upsert({
           user_id: user.id,
           visual: results.visual,
           auditory: results.auditory,

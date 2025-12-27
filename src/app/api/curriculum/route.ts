@@ -4,16 +4,17 @@ import { createServerClient, createAdminClient } from '@/lib/supabase';
 // GET /api/curriculum - Get curriculum structure
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     const { searchParams } = new URL(request.url);
-    
+
     const classNumber = searchParams.get('class');
     const subjectId = searchParams.get('subject');
     const chapterId = searchParams.get('chapter');
 
     // Get all classes
     if (!classNumber) {
-      const { data: classes, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: classes, error } = await (supabase as any)
         .from('classes')
         .select('*')
         .order('class_number');
@@ -24,7 +25,8 @@ export async function GET(request: NextRequest) {
 
     // Get subjects for a class
     if (classNumber && !subjectId) {
-      const { data: classData } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: classData } = await (supabase as any)
         .from('classes')
         .select('id')
         .eq('class_number', parseInt(classNumber))
@@ -34,7 +36,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Class not found' }, { status: 404 });
       }
 
-      const { data: subjects, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: subjects, error } = await (supabase as any)
         .from('subjects')
         .select(`
           *,
@@ -48,7 +51,8 @@ export async function GET(request: NextRequest) {
 
     // Get chapters for a subject
     if (subjectId && !chapterId) {
-      const { data: chapters, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: chapters, error } = await (supabase as any)
         .from('chapters')
         .select(`
           *,
@@ -63,7 +67,8 @@ export async function GET(request: NextRequest) {
 
     // Get topics for a chapter
     if (chapterId) {
-      const { data: topics, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: topics, error } = await (supabase as any)
         .from('topics')
         .select('*')
         .eq('chapter_id', chapterId)
@@ -72,13 +77,15 @@ export async function GET(request: NextRequest) {
       if (error) throw error;
 
       // Also get learning content for the topics
-      const topicIds = topics?.map(t => t.id) || [];
-      const { data: content } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const topicIds = topics?.map((t: any) => t.id) || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: content } = await (supabase as any)
         .from('learning_content')
         .select('*')
         .in('topic_id', topicIds);
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         topics,
         content: content || [],
       });
@@ -113,7 +120,8 @@ export async function POST(request: NextRequest) {
       display_name_hindi: `कक्षा ${i + 1}`,
     }));
 
-    const { data: insertedClasses, error: classError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: insertedClasses, error: classError } = await (supabase as any)
       .from('classes')
       .upsert(classes, { onConflict: 'class_number' })
       .select();
@@ -121,7 +129,8 @@ export async function POST(request: NextRequest) {
     if (classError) throw classError;
 
     // Sample subjects for Class 6
-    const class6 = insertedClasses?.find(c => c.class_number === 6);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const class6 = insertedClasses?.find((c: any) => c.class_number === 6);
     if (class6) {
       const subjects = [
         { name: 'Mathematics', name_hindi: 'गणित', code: 'MATH', icon: '📐', color: '#6366F1', book_title: 'Ganit', book_code: 'femh1' },
@@ -132,7 +141,8 @@ export async function POST(request: NextRequest) {
       ];
 
       for (const subject of subjects) {
-        const { data: insertedSubject, error: subjectError } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: insertedSubject, error: subjectError } = await (supabase as any)
           .from('subjects')
           .upsert({
             class_id: class6.id,
@@ -162,7 +172,8 @@ export async function POST(request: NextRequest) {
           ];
 
           for (const chapter of chapters) {
-            await supabase
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (supabase as any)
               .from('chapters')
               .upsert({
                 subject_id: insertedSubject.id,

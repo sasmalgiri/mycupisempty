@@ -5,7 +5,7 @@ import type { VARKStyle } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's learning style
-    const { data: learningStyle } = await supabase
-      .from('learning_styles')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: learningStyle } = await (supabase.from('learning_styles') as any)
       .select('primary_style')
       .eq('user_id', user.id)
       .single();
@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
     let previousMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
     
     if (sessionId) {
-      const { data: messages } = await supabase
-        .from('chat_messages')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: messages } = await (supabase.from('chat_messages') as any)
         .select('role, content')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true })
@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
 
     // Save messages to database (if session exists)
     if (sessionId) {
-      await supabase.from('chat_messages').insert([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('chat_messages') as any).insert([
         {
           session_id: sessionId,
           role: 'user',
