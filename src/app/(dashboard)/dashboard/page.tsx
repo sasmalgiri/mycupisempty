@@ -1,17 +1,60 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@/lib/supabase';
-import type { Profile, Subject, UserStats, LearningStyle, DailyGoal } from '@/types';
+import { useCurriculum, useProgress } from '@/hooks';
+import type { Profile, UserStats, LearningStyle } from '@/types';
 
-// Mock data for demo (replace with actual Supabase queries)
-const MOCK_SUBJECTS = [
-  { id: '1', name: 'Mathematics', icon: '📐', color: '#6366F1', progress: 65, accuracy: 78 },
-  { id: '2', name: 'Science', icon: '🔬', color: '#8B5CF6', progress: 48, accuracy: 82 },
-  { id: '3', name: 'English', icon: '📖', color: '#EC4899', progress: 72, accuracy: 85 },
-  { id: '4', name: 'Hindi', icon: '📝', color: '#F97316', progress: 55, accuracy: 70 },
-  { id: '5', name: 'Social Science', icon: '🌍', color: '#14B8A6', progress: 40, accuracy: 75 },
+// Subject with progress for display
+interface SubjectWithProgress {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  progress: number;
+  accuracy: number;
+  chaptersCount?: number;
+}
+
+// Default icons and colors for subjects
+const SUBJECT_ICONS: Record<string, string> = {
+  'Mathematics': '📐',
+  'Science': '🔬',
+  'English': '📖',
+  'Hindi': '📝',
+  'Social Science': '🌍',
+  'Physics': '⚛️',
+  'Chemistry': '🧪',
+  'Biology': '🧬',
+  'Computer Science': '💻',
+  'Economics': '📈',
+  'History': '📜',
+  'Geography': '🗺️',
+};
+
+const SUBJECT_COLORS: Record<string, string> = {
+  'Mathematics': '#6366F1',
+  'Science': '#8B5CF6',
+  'English': '#EC4899',
+  'Hindi': '#F97316',
+  'Social Science': '#14B8A6',
+  'Physics': '#3B82F6',
+  'Chemistry': '#10B981',
+  'Biology': '#22C55E',
+  'Computer Science': '#6366F1',
+  'Economics': '#EAB308',
+  'History': '#A855F7',
+  'Geography': '#14B8A6',
+};
+
+// Default subjects fallback
+const DEFAULT_SUBJECTS: SubjectWithProgress[] = [
+  { id: '1', name: 'Mathematics', icon: '📐', color: '#6366F1', progress: 0, accuracy: 0 },
+  { id: '2', name: 'Science', icon: '🔬', color: '#8B5CF6', progress: 0, accuracy: 0 },
+  { id: '3', name: 'English', icon: '📖', color: '#EC4899', progress: 0, accuracy: 0 },
+  { id: '4', name: 'Hindi', icon: '📝', color: '#F97316', progress: 0, accuracy: 0 },
+  { id: '5', name: 'Social Science', icon: '🌍', color: '#14B8A6', progress: 0, accuracy: 0 },
 ];
 
 export default function DashboardPage() {
@@ -19,6 +62,43 @@ export default function DashboardPage() {
   const [learningStyle, setLearningStyle] = useState<LearningStyle | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Get user's class level (default to 6)
+  const classLevel = user?.current_class || 6;
+
+  // Fetch curriculum and progress using hooks
+  const { subjects: curriculumSubjects, loading: curriculumLoading } = useCurriculum(classLevel);
+  const { progress, loading: progressLoading } = useProgress();
+
+  // Combine curriculum with progress data
+  const subjectsWithProgress = useMemo<SubjectWithProgress[]>(() => {
+    if (!curriculumSubjects || curriculumSubjects.length === 0) {
+      return DEFAULT_SUBJECTS;
+    }
+
+    return curriculumSubjects.map((subject) => {
+      // Get progress for this subject
+      const subjectProgress = progress?.subjectProgress?.[subject.id] || {
+        completed: 0,
+        total: 100,
+        accuracy: 0
+      };
+
+      const progressPercent = subjectProgress.total > 0
+        ? Math.round((subjectProgress.completed / subjectProgress.total) * 100)
+        : 0;
+
+      return {
+        id: subject.id,
+        name: subject.name,
+        icon: subject.icon || SUBJECT_ICONS[subject.name] || '📚',
+        color: subject.color || SUBJECT_COLORS[subject.name] || '#6366F1',
+        progress: progressPercent,
+        accuracy: subjectProgress.accuracy || 0,
+        chaptersCount: subject.chapters?.length || 0,
+      };
+    });
+  }, [curriculumSubjects, progress]);
 
   useEffect(() => {
     loadUserData();
@@ -275,7 +355,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
-              {MOCK_SUBJECTS.map((subject) => (
+              {subjectsWithProgress.map((subject) => (
                 <Link
                   key={subject.id}
                   href={`/subjects/${subject.id}`}

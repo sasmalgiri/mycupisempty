@@ -89,8 +89,11 @@ export async function middleware(request: NextRequest) {
 
     // Redirect to assessment if not completed
     if (!learningStyle && !request.nextUrl.pathname.startsWith('/assessment')) {
-      // Allow skipping assessment for now - remove this in production
-      // return NextResponse.redirect(new URL('/assessment', request.url));
+      // Optional: Skip assessment in development by setting NEXT_PUBLIC_SKIP_ASSESSMENT=true
+      const skipAssessment = process.env.NEXT_PUBLIC_SKIP_ASSESSMENT === 'true';
+      if (!skipAssessment) {
+        return NextResponse.redirect(new URL('/assessment', request.url));
+      }
     }
   }
 
