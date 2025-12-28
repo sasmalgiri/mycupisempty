@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createBrowserClient } from '@/lib/supabase';
 import { useCurriculum, useProgress } from '@/hooks';
 import type { Profile, UserStats, LearningStyle } from '@/types';
+import JoinClassroomModal from '@/components/JoinClassroomModal';
 
 // Subject with progress for display
 interface SubjectWithProgress {
@@ -62,6 +63,8 @@ export default function DashboardPage() {
   const [learningStyle, setLearningStyle] = useState<LearningStyle | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [enrolledClassrooms, setEnrolledClassrooms] = useState<{ id: string; name: string }[]>([]);
 
   // Get user's class level (default to 6)
   const classLevel = user?.current_class || 6;
@@ -142,12 +145,30 @@ export default function DashboardPage() {
         if (userStats) {
           setStats(userStats as UserStats);
         }
+
+        // Load enrolled classrooms
+        const { data: enrollments } = await supabase
+          .from('classroom_enrollments')
+          .select('classroom_id, classrooms(id, name)')
+          .eq('student_id', authUser.id)
+          .eq('status', 'active');
+
+        if (enrollments) {
+          const classroomsList = enrollments
+            .map((e: any) => e.classrooms)
+            .filter(Boolean);
+          setEnrolledClassrooms(classroomsList);
+        }
       }
     } catch (error) {
       console.error('Error loading user data:', error);
     } finally {
       setLoading(false);
     }
+  }
+
+  const handleJoinSuccess = () => {
+    loadUserData(); // Refresh data after joining
   }
 
   const getGreeting = () => {
@@ -327,7 +348,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="bg-gray-50 rounded-xl p-4 text-center">
                   <div className="text-2xl font-bold text-green-600">
-                    {stats?.total_questions_attempted 
+                    {stats?.total_questions_attempted
                       ? Math.round((stats.total_questions_correct / stats.total_questions_attempted) * 100)
                       : 0}%
                   </div>
@@ -342,6 +363,46 @@ export default function DashboardPage() {
                   <div className="text-xs text-gray-500">Study Time</div>
                 </div>
               </div>
+            </div>
+
+            {/* Classrooms */}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-bold">🏫 My Classrooms</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowJoinModal(true)}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  + Join
+                </button>
+              </div>
+              {enrolledClassrooms.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-gray-500 text-sm mb-3">Not enrolled in any classroom yet</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowJoinModal(true)}
+                    className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg text-sm font-medium hover:bg-primary-200 transition-colors"
+                  >
+                    Join a Classroom
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {enrolledClassrooms.map(classroom => (
+                    <div
+                      key={classroom.id}
+                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center text-primary-600 font-bold text-sm">
+                        🏫
+                      </div>
+                      <span className="font-medium text-gray-900 text-sm">{classroom.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -426,6 +487,13 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Join Classroom Modal */}
+      <JoinClassroomModal
+        isOpen={showJoinModal}
+        onClose={() => setShowJoinModal(false)}
+        onSuccess={handleJoinSuccess}
+      />
     </div>
   );
 }

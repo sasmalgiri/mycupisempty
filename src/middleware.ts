@@ -56,16 +56,19 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Protected routes
-  const protectedRoutes = ['/dashboard', '/subjects', '/progress', '/achievements', '/assessment', '/settings'];
+  // Route definitions
+  const studentRoutes = ['/dashboard', '/subjects', '/progress', '/achievements', '/assessment', '/settings', '/flashcards'];
+  const teacherRoutes = ['/teacher'];
   const authRoutes = ['/login', '/signup'];
 
-  const isProtectedRoute = protectedRoutes.some(route => 
+  const isStudentRoute = studentRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   );
-  const isAuthRoute = authRoutes.some(route => 
+  const isTeacherRoute = request.nextUrl.pathname.startsWith('/teacher');
+  const isAuthRoute = authRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   );
+  const isProtectedRoute = isStudentRoute || isTeacherRoute;
 
   // Redirect to login if accessing protected route without auth
   if (isProtectedRoute && !user) {
@@ -74,25 +77,50 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Redirect to dashboard if accessing auth routes while logged in
-  if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  // Check if user has completed VARK assessment
-  if (user && isProtectedRoute && !request.nextUrl.pathname.startsWith('/assessment')) {
-    const { data: learningStyle } = await supabase
-      .from('learning_styles')
-      .select('id')
-      .eq('user_id', user.id)
+  // Handle authenticated users
+  if (user) {
+    // Fetch user profile to get role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
       .single();
 
-    // Redirect to assessment if not completed
-    if (!learningStyle && !request.nextUrl.pathname.startsWith('/assessment')) {
-      // Optional: Skip assessment in development by setting NEXT_PUBLIC_SKIP_ASSESSMENT=true
-      const skipAssessment = process.env.NEXT_PUBLIC_SKIP_ASSESSMENT === 'true';
-      if (!skipAssessment) {
-        return NextResponse.redirect(new URL('/assessment', request.url));
+    const userRole = profile?.role || 'student';
+    const isTeacher = userRole === 'teacher';
+    const isStudent = userRole === 'student';
+
+    // Redirect authenticated users from auth routes based on role
+    if (isAuthRoute) {
+      const redirectUrl = isTeacher ? '/teacher/dashboard' : '/dashboard';
+      return NextResponse.redirect(new URL(redirectUrl, request.url));
+    }
+
+    // Role-based access control
+    if (isTeacher && isStudentRoute) {
+      // Teachers trying to access student routes -> redirect to teacher dashboard
+      return NextResponse.redirect(new URL('/teacher/dashboard', request.url));
+    }
+
+    if (isStudent && isTeacherRoute) {
+      // Students trying to access teacher routes -> redirect to student dashboard
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // VARK assessment check (only for students on student routes)
+    if (isStudent && isStudentRoute && !request.nextUrl.pathname.startsWith('/assessment')) {
+      const { data: learningStyle } = await supabase
+        .from('learning_styles')
+        .select('dominant_style')
+        .eq('user_id', user.id)
+        .single();
+
+      // Redirect to assessment if not completed (no dominant_style set)
+      if (!learningStyle?.dominant_style) {
+        const skipAssessment = process.env.NEXT_PUBLIC_SKIP_ASSESSMENT === 'true';
+        if (!skipAssessment) {
+          return NextResponse.redirect(new URL('/assessment', request.url));
+        }
       }
     }
   }

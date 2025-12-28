@@ -97,7 +97,7 @@ export default function SettingsPage() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{settings.name}</h2>
                 <p className="text-gray-500">Class {settings.classNumber}</p>
-                <button className="text-sm text-primary-600 hover:underline mt-2">
+                <button type="button" className="text-sm text-primary-600 hover:underline mt-2">
                   Change Photo
                 </button>
               </div>
@@ -105,11 +105,13 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
                   Full Name
                 </label>
                 <input
                   type="text"
+                  id="fullName"
+                  name="fullName"
                   value={settings.name}
                   onChange={e => setSettings({ ...settings, name: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -117,11 +119,13 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   Email
                 </label>
                 <input
                   type="email"
+                  id="email"
+                  name="email"
                   value={settings.email}
                   onChange={e => setSettings({ ...settings, email: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -129,13 +133,16 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="classNumber" className="block text-sm font-medium text-gray-700 mb-2">
                   Class
                 </label>
                 <select
+                  id="classNumber"
+                  name="classNumber"
                   value={settings.classNumber}
                   onChange={e => setSettings({ ...settings, classNumber: parseInt(e.target.value) })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  title="Select your class"
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
                     <option key={n} value={n}>Class {n}</option>
@@ -144,16 +151,19 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="language" className="block text-sm font-medium text-gray-700 mb-2">
                   Language
                 </label>
                 <select
+                  id="language"
+                  name="language"
                   value={settings.preferences.language}
                   onChange={e => setSettings({
                     ...settings,
                     preferences: { ...settings.preferences, language: e.target.value }
                   })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  title="Select your language"
                 >
                   <option value="en">English</option>
                   <option value="hi">हिंदी</option>
@@ -164,10 +174,10 @@ export default function SettingsPage() {
             <div className="pt-6 border-t border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Actions</h3>
               <div className="flex gap-4">
-                <button className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">
+                <button type="button" className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">
                   Change Password
                 </button>
-                <button className="px-4 py-2 border border-error-200 rounded-lg text-error-600 hover:bg-error-50">
+                <button type="button" className="px-4 py-2 border border-error-200 rounded-lg text-error-600 hover:bg-error-50">
                   Delete Account
                 </button>
               </div>
@@ -255,10 +265,12 @@ export default function SettingsPage() {
         {activeTab === 'preferences' && (
           <div className="bg-white rounded-2xl shadow-md p-6 space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily Learning Goal</h3>
+              <h3 id="daily-goal-label" className="text-lg font-semibold text-gray-900 mb-4">Daily Learning Goal</h3>
               <div className="flex items-center gap-4">
                 <input
                   type="range"
+                  id="dailyGoal"
+                  name="dailyGoal"
                   min="10"
                   max="120"
                   step="10"
@@ -268,6 +280,7 @@ export default function SettingsPage() {
                     preferences: { ...settings.preferences, dailyGoal: parseInt(e.target.value) }
                   })}
                   className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  aria-labelledby="daily-goal-label"
                 />
                 <span className="text-lg font-bold text-primary-600 min-w-[80px]">
                   {settings.preferences.dailyGoal} min
@@ -285,12 +298,16 @@ export default function SettingsPage() {
             <div className="pt-6 border-t border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Notifications</h3>
               <div className="space-y-4">
-                <label className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-gray-700">Push Notifications</p>
                     <p className="text-sm text-gray-500">Get reminders to study</p>
                   </div>
                   <button
+                    type="button"
+                    role="switch"
+                    aria-checked={settings.preferences.notifications ? "true" : "false"}
+                    aria-label="Toggle push notifications"
                     onClick={() => setSettings({
                       ...settings,
                       preferences: { ...settings.preferences, notifications: !settings.preferences.notifications }
@@ -303,14 +320,18 @@ export default function SettingsPage() {
                       settings.preferences.notifications ? 'translate-x-6' : 'translate-x-0.5'
                     }`} />
                   </button>
-                </label>
+                </div>
 
-                <label className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-gray-700">Sound Effects</p>
                     <p className="text-sm text-gray-500">Play sounds for achievements</p>
                   </div>
                   <button
+                    type="button"
+                    role="switch"
+                    aria-checked={settings.preferences.sound ? "true" : "false"}
+                    aria-label="Toggle sound effects"
                     onClick={() => setSettings({
                       ...settings,
                       preferences: { ...settings.preferences, sound: !settings.preferences.sound }
@@ -323,24 +344,28 @@ export default function SettingsPage() {
                       settings.preferences.sound ? 'translate-x-6' : 'translate-x-0.5'
                     }`} />
                   </button>
-                </label>
+                </div>
               </div>
             </div>
 
             <div className="pt-6 border-t border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Appearance</h3>
-              <label className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium text-gray-700">Dark Mode</p>
                   <p className="text-sm text-gray-500">Use dark theme (Coming soon)</p>
                 </div>
                 <button
+                  type="button"
+                  role="switch"
+                  aria-checked="false"
+                  aria-label="Toggle dark mode"
                   disabled
                   className="w-12 h-6 rounded-full bg-gray-200 opacity-50 cursor-not-allowed"
                 >
                   <div className="w-5 h-5 bg-white rounded-full shadow translate-x-0.5" />
                 </button>
-              </label>
+              </div>
             </div>
           </div>
         )}

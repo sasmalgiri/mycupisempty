@@ -298,6 +298,8 @@ export default function FlashcardsPage() {
             value={selectedSubject}
             onChange={(e) => { setSelectedSubject(e.target.value); setCurrentIndex(0); }}
             className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 font-medium text-sm"
+            aria-label="Filter by subject"
+            title="Filter by subject"
           >
             <option value="all">All Subjects</option>
             {subjects.map(s => (

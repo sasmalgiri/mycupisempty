@@ -110,8 +110,8 @@ export default function DashboardLayout({
             <span className="text-xl">⚙️</span>
             <span>Settings</span>
           </Link>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all">
-            <span className="text-xl">🚪</span>
+          <button type="button" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all">
+            <span className="text-xl" aria-hidden="true">🚪</span>
             <span>Logout</span>
           </button>
         </div>
@@ -122,11 +122,13 @@ export default function DashboardLayout({
         {/* Mobile Header */}
         <header className="lg:hidden sticky top-0 z-30 glass-effect border-b border-white/20">
           <div className="flex items-center justify-between px-4 h-14">
-            <button 
+            <button
+              type="button"
               onClick={() => setSidebarOpen(true)}
               className="p-2 hover:bg-gray-100 rounded-lg"
+              aria-label="Open menu"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>

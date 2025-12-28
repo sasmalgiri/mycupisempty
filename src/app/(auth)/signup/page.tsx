@@ -128,14 +128,16 @@ export default function SignupPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="currentClass" className="block text-sm font-medium text-gray-700 mb-2">
                   Class
                 </label>
                 <select
+                  id="currentClass"
                   name="currentClass"
                   value={formData.currentClass}
                   onChange={handleChange}
                   className="input-field"
+                  title="Select your class"
                 >
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
                     <option key={num} value={num}>
@@ -146,14 +148,16 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
                   I am a
                 </label>
                 <select
+                  id="role"
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
                   className="input-field"
+                  title="Select your role"
                 >
                   <option value="student">Student</option>
                   <option value="teacher">Teacher</option>
