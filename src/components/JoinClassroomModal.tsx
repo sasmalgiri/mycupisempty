@@ -24,8 +24,8 @@ export default function JoinClassroomModal({ isOpen, onClose, onSuccess }: JoinC
     if (upperCode.length === 6) {
       // Look up classroom
       const supabase = createBrowserClient();
-      const { data: classroom } = await supabase
-        .from('classrooms')
+      const { data: classroom } = await (supabase
+        .from('classrooms') as any)
         .select('name, class_level, is_active')
         .eq('invite_code', upperCode)
         .single();
@@ -63,8 +63,8 @@ export default function JoinClassroomModal({ isOpen, onClose, onSuccess }: JoinC
 
     try {
       // Find classroom by invite code
-      const { data: classroom, error: findError } = await supabase
-        .from('classrooms')
+      const { data: classroom, error: findError } = await (supabase
+        .from('classrooms') as any)
         .select('id, name, max_students')
         .eq('invite_code', inviteCode)
         .eq('is_active', true)
@@ -77,8 +77,8 @@ export default function JoinClassroomModal({ isOpen, onClose, onSuccess }: JoinC
       }
 
       // Check if already enrolled
-      const { data: existingEnrollment } = await supabase
-        .from('classroom_enrollments')
+      const { data: existingEnrollment } = await (supabase
+        .from('classroom_enrollments') as any)
         .select('id, status')
         .eq('classroom_id', classroom.id)
         .eq('student_id', user.id)
@@ -91,8 +91,8 @@ export default function JoinClassroomModal({ isOpen, onClose, onSuccess }: JoinC
           setError('You were removed from this classroom');
         } else {
           // Re-enroll
-          await supabase
-            .from('classroom_enrollments')
+          await (supabase
+            .from('classroom_enrollments') as any)
             .update({ status: 'active', joined_at: new Date().toISOString() })
             .eq('id', existingEnrollment.id);
 
@@ -104,8 +104,8 @@ export default function JoinClassroomModal({ isOpen, onClose, onSuccess }: JoinC
       }
 
       // Check classroom capacity
-      const { count: currentStudents } = await supabase
-        .from('classroom_enrollments')
+      const { count: currentStudents } = await (supabase
+        .from('classroom_enrollments') as any)
         .select('*', { count: 'exact', head: true })
         .eq('classroom_id', classroom.id)
         .eq('status', 'active');
@@ -117,8 +117,8 @@ export default function JoinClassroomModal({ isOpen, onClose, onSuccess }: JoinC
       }
 
       // Enroll student
-      const { error: enrollError } = await supabase
-        .from('classroom_enrollments')
+      const { error: enrollError } = await (supabase
+        .from('classroom_enrollments') as any)
         .insert({
           classroom_id: classroom.id,
           student_id: user.id,

@@ -28,7 +28,7 @@ interface Student {
     auditory_score: number;
     reading_score: number;
     kinesthetic_score: number;
-    dominant_style: string;
+    dominant_style: string | null;
   };
   stats?: {
     total_xp: number;
@@ -55,45 +55,45 @@ export default function ClassroomDetailPage() {
     const supabase = createBrowserClient();
 
     try {
-      // Fetch classroom
-      const { data: classroomData } = await supabase
-        .from('classrooms')
+      // Fetch classroom - cast to any for new tables
+      const { data: classroomData } = await (supabase
+        .from('classrooms') as any)
         .select('*')
         .eq('id', classroomId)
         .single();
 
       if (classroomData) {
-        setClassroom(classroomData);
+        setClassroom(classroomData as Classroom);
 
-        // Fetch enrolled students
-        const { data: enrollments } = await supabase
-          .from('classroom_enrollments')
+        // Fetch enrolled students - cast to any for new tables
+        const { data: enrollments } = await (supabase
+          .from('classroom_enrollments') as any)
           .select('student_id, joined_at')
           .eq('classroom_id', classroomId)
           .eq('status', 'active');
 
         if (enrollments && enrollments.length > 0) {
-          const studentIds = enrollments.map(e => e.student_id);
+          const studentIds = (enrollments as any[]).map((e: any) => e.student_id);
 
-          // Fetch student profiles
+          // Fetch student profiles - add type assertion
           const { data: profiles } = await supabase
             .from('profiles')
             .select('id, full_name, email, avatar_url, current_class')
-            .in('id', studentIds);
+            .in('id', studentIds) as { data: { id: string; full_name: string | null; email: string | null; avatar_url: string | null; current_class: number | null }[] | null };
 
-          // Fetch learning styles
+          // Fetch learning styles - add type assertion
           const { data: learningStyles } = await supabase
             .from('learning_styles')
             .select('user_id, visual_score, auditory_score, reading_score, kinesthetic_score, dominant_style')
-            .in('user_id', studentIds);
+            .in('user_id', studentIds) as { data: { user_id: string; visual_score: number; auditory_score: number; reading_score: number; kinesthetic_score: number; dominant_style: string | null }[] | null };
 
-          // Fetch user stats
+          // Fetch user stats - add type assertion
           const { data: userStats } = await supabase
             .from('user_stats')
             .select('user_id, total_xp, current_streak, level')
-            .in('user_id', studentIds);
+            .in('user_id', studentIds) as { data: { user_id: string; total_xp: number; current_streak: number; level: number }[] | null };
 
-          const studentsData: Student[] = enrollments.map(enrollment => {
+          const studentsData: Student[] = (enrollments as any[]).map((enrollment: any) => {
             const profile = profiles?.find(p => p.id === enrollment.student_id);
             const style = learningStyles?.find(s => s.user_id === enrollment.student_id);
             const stats = userStats?.find(s => s.user_id === enrollment.student_id);
@@ -286,7 +286,7 @@ export default function ClassroomDetailPage() {
                     <p className="text-sm text-gray-500">Joined {new Date(student.joined_at).toLocaleDateString()}</p>
                   </div>
 
-                  {student.learning_style && (
+                  {student.learning_style && student.learning_style.dominant_style && (
                     <div className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${getStyleColor(student.learning_style.dominant_style)}`}>
                       {getStyleEmoji(student.learning_style.dominant_style)} {student.learning_style.dominant_style}
                     </div>

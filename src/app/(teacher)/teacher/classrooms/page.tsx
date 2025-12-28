@@ -32,23 +32,23 @@ export default function ClassroomsPage() {
     if (!user) return;
 
     try {
-      const { data: classroomsData } = await supabase
-        .from('classrooms')
+      const { data: classroomsData } = await (supabase
+        .from('classrooms') as any)
         .select('*')
         .eq('teacher_id', user.id)
         .order('created_at', { ascending: false });
 
       if (classroomsData) {
         const classroomsWithStats = await Promise.all(
-          classroomsData.map(async (classroom) => {
-            const { count: studentCount } = await supabase
-              .from('classroom_enrollments')
+          (classroomsData as any[]).map(async (classroom: any) => {
+            const { count: studentCount } = await (supabase
+              .from('classroom_enrollments') as any)
               .select('*', { count: 'exact', head: true })
               .eq('classroom_id', classroom.id)
               .eq('status', 'active');
 
-            const { count: assignmentCount } = await supabase
-              .from('assignments')
+            const { count: assignmentCount } = await (supabase
+              .from('assignments') as any)
               .select('*', { count: 'exact', head: true })
               .eq('classroom_id', classroom.id)
               .eq('status', 'published');
@@ -79,8 +79,8 @@ export default function ClassroomsPage() {
   const toggleClassroomStatus = async (classroomId: string, currentStatus: boolean) => {
     const supabase = createBrowserClient();
 
-    const { error } = await supabase
-      .from('classrooms')
+    const { error } = await (supabase
+      .from('classrooms') as any)
       .update({ is_active: !currentStatus })
       .eq('id', classroomId);
 

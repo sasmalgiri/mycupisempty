@@ -12,7 +12,7 @@ interface Student {
   classroom_name: string;
   classroom_id: string;
   joined_at: string;
-  dominant_style?: string;
+  dominant_style?: string | null;
   total_xp: number;
   level: number;
   current_streak: number;
@@ -37,55 +37,55 @@ export default function StudentsPage() {
     if (!user) return;
 
     try {
-      // Fetch teacher's classrooms
-      const { data: classroomsData } = await supabase
-        .from('classrooms')
+      // Fetch teacher's classrooms - cast to any for new tables
+      const { data: classroomsData } = await (supabase
+        .from('classrooms') as any)
         .select('id, name')
         .eq('teacher_id', user.id)
         .eq('is_active', true);
 
-      setClassrooms(classroomsData || []);
+      setClassrooms((classroomsData || []) as { id: string; name: string }[]);
 
       if (!classroomsData || classroomsData.length === 0) {
         setLoading(false);
         return;
       }
 
-      const classroomIds = classroomsData.map(c => c.id);
+      const classroomIds = (classroomsData as any[]).map((c: any) => c.id);
 
-      // Fetch all enrollments
-      const { data: enrollments } = await supabase
-        .from('classroom_enrollments')
+      // Fetch all enrollments - cast to any for new tables
+      const { data: enrollments } = await (supabase
+        .from('classroom_enrollments') as any)
         .select('student_id, classroom_id, joined_at')
         .in('classroom_id', classroomIds)
         .eq('status', 'active');
 
       if (enrollments && enrollments.length > 0) {
-        const studentIds = [...new Set(enrollments.map(e => e.student_id))];
+        const studentIds = [...new Set((enrollments as any[]).map((e: any) => e.student_id))] as string[];
 
-        // Fetch profiles
+        // Fetch profiles - add type assertion
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name, email, current_class')
-          .in('id', studentIds);
+          .in('id', studentIds) as { data: { id: string; full_name: string | null; email: string | null; current_class: number | null }[] | null };
 
-        // Fetch learning styles
+        // Fetch learning styles - add type assertion
         const { data: learningStyles } = await supabase
           .from('learning_styles')
           .select('user_id, dominant_style')
-          .in('user_id', studentIds);
+          .in('user_id', studentIds) as { data: { user_id: string; dominant_style: string | null }[] | null };
 
-        // Fetch user stats
+        // Fetch user stats - add type assertion
         const { data: userStats } = await supabase
           .from('user_stats')
           .select('user_id, total_xp, level, current_streak')
-          .in('user_id', studentIds);
+          .in('user_id', studentIds) as { data: { user_id: string; total_xp: number; level: number; current_streak: number }[] | null };
 
-        const studentsData: Student[] = enrollments.map(enrollment => {
+        const studentsData: Student[] = (enrollments as any[]).map((enrollment: any) => {
           const profile = profiles?.find(p => p.id === enrollment.student_id);
           const style = learningStyles?.find(s => s.user_id === enrollment.student_id);
           const stats = userStats?.find(s => s.user_id === enrollment.student_id);
-          const classroom = classroomsData.find(c => c.id === enrollment.classroom_id);
+          const classroom = (classroomsData as any[]).find((c: any) => c.id === enrollment.classroom_id);
 
           return {
             id: enrollment.student_id,

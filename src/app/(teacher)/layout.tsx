@@ -42,7 +42,7 @@ export default function TeacherLayout({
           .from('profiles')
           .select('full_name, email, school_name')
           .eq('id', user.id)
-          .single();
+          .single() as { data: { full_name: string | null; email: string | null; school_name: string | null } | null };
 
         if (profile) {
           setTeacherProfile({
@@ -52,23 +52,24 @@ export default function TeacherLayout({
           });
         }
 
-        // Fetch stats
-        const { count: classroomCount } = await supabase
-          .from('classrooms')
+        // Fetch stats - use any to bypass type checking for new tables
+        const { count: classroomCount } = await (supabase
+          .from('classrooms') as any)
           .select('*', { count: 'exact', head: true })
           .eq('teacher_id', user.id);
 
-        const { data: enrollments } = await supabase
-          .from('classroom_enrollments')
+        const classroomsResult = await (supabase.from('classrooms') as any).select('id').eq('teacher_id', user.id);
+        const classroomIds = classroomsResult.data?.map((c: any) => c.id) || [];
+
+        const { data: enrollments } = await (supabase
+          .from('classroom_enrollments') as any)
           .select('student_id, classroom_id')
-          .in('classroom_id',
-            (await supabase.from('classrooms').select('id').eq('teacher_id', user.id)).data?.map(c => c.id) || []
-          )
+          .in('classroom_id', classroomIds.length > 0 ? classroomIds : [''])
           .eq('status', 'active');
 
         setStats({
           totalClassrooms: classroomCount || 0,
-          totalStudents: new Set(enrollments?.map(e => e.student_id)).size || 0,
+          totalStudents: new Set((enrollments || []).map((e: any) => e.student_id)).size || 0,
         });
       }
     };

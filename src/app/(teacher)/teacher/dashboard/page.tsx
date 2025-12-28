@@ -51,29 +51,29 @@ export default function TeacherDashboardPage() {
     if (!user) return;
 
     try {
-      // Fetch classrooms
-      const { data: classroomsData } = await supabase
-        .from('classrooms')
+      // Fetch classrooms - cast to any for new tables
+      const { data: classroomsData } = await (supabase
+        .from('classrooms') as any)
         .select('id, name, class_level, invite_code')
         .eq('teacher_id', user.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      const classroomsList = classroomsData || [];
+      const classroomsList = (classroomsData || []) as any[];
 
       // Fetch enrollments for each classroom
       const classroomSummaries: ClassroomSummary[] = [];
       let totalStudentIds = new Set<string>();
 
       for (const classroom of classroomsList) {
-        const { data: enrollments } = await supabase
-          .from('classroom_enrollments')
+        const { data: enrollments } = await (supabase
+          .from('classroom_enrollments') as any)
           .select('student_id')
           .eq('classroom_id', classroom.id)
           .eq('status', 'active');
 
         const studentCount = enrollments?.length || 0;
-        enrollments?.forEach(e => totalStudentIds.add(e.student_id));
+        (enrollments || []).forEach((e: any) => totalStudentIds.add(e.student_id));
 
         classroomSummaries.push({
           ...classroom,
@@ -83,16 +83,16 @@ export default function TeacherDashboardPage() {
 
       setClassrooms(classroomSummaries);
 
-      // Fetch assignments count
-      const { count: assignmentsCount } = await supabase
-        .from('assignments')
+      // Fetch assignments count - cast to any for new tables
+      const { count: assignmentsCount } = await (supabase
+        .from('assignments') as any)
         .select('*', { count: 'exact', head: true })
         .eq('teacher_id', user.id)
         .eq('status', 'published');
 
-      // Fetch pending submissions
-      const { count: pendingCount } = await supabase
-        .from('assignment_submissions')
+      // Fetch pending submissions - cast to any for new tables
+      const { count: pendingCount } = await (supabase
+        .from('assignment_submissions') as any)
         .select('*, assignments!inner(*)', { count: 'exact', head: true })
         .eq('assignments.teacher_id', user.id)
         .eq('status', 'submitted');
@@ -106,32 +106,32 @@ export default function TeacherDashboardPage() {
 
       // Fetch recent students with their VARK styles
       if (classroomsList.length > 0) {
-        const { data: recentEnrollments } = await supabase
-          .from('classroom_enrollments')
+        const { data: recentEnrollments } = await (supabase
+          .from('classroom_enrollments') as any)
           .select(`
             student_id,
             joined_at,
             classrooms (name)
           `)
-          .in('classroom_id', classroomsList.map(c => c.id))
+          .in('classroom_id', classroomsList.map((c: any) => c.id))
           .eq('status', 'active')
           .order('joined_at', { ascending: false })
           .limit(5);
 
         if (recentEnrollments && recentEnrollments.length > 0) {
-          const studentIds = recentEnrollments.map(e => e.student_id);
+          const studentIds = recentEnrollments.map((e: any) => e.student_id);
 
           const { data: profiles } = await supabase
             .from('profiles')
             .select('id, full_name')
-            .in('id', studentIds);
+            .in('id', studentIds) as { data: { id: string; full_name: string | null }[] | null };
 
           const { data: learningStyles } = await supabase
             .from('learning_styles')
             .select('user_id, dominant_style')
-            .in('user_id', studentIds);
+            .in('user_id', studentIds) as { data: { user_id: string; dominant_style: string | null }[] | null };
 
-          const recentStudentsList: RecentStudent[] = recentEnrollments.map(enrollment => {
+          const recentStudentsList: RecentStudent[] = recentEnrollments.map((enrollment: any) => {
             const profile = profiles?.find(p => p.id === enrollment.student_id);
             const style = learningStyles?.find(s => s.user_id === enrollment.student_id);
             return {
@@ -324,10 +324,10 @@ export default function TeacherDashboardPage() {
               <h2 className="text-lg font-bold text-gray-900 mb-4">Class Learning Styles</h2>
               <div className="space-y-3">
                 {[
-                  { key: 'visual', label: 'Visual', emoji: '👁️', color: 'bg-purple-500' },
-                  { key: 'auditory', label: 'Auditory', emoji: '👂', color: 'bg-blue-500' },
-                  { key: 'reading', label: 'Reading/Writing', emoji: '📖', color: 'bg-green-500' },
-                  { key: 'kinesthetic', label: 'Kinesthetic', emoji: '🤸', color: 'bg-orange-500' },
+                  { key: 'visual' as const, label: 'Visual', emoji: '👁️', color: 'bg-purple-500' },
+                  { key: 'auditory' as const, label: 'Auditory', emoji: '👂', color: 'bg-blue-500' },
+                  { key: 'reading' as const, label: 'Reading/Writing', emoji: '📖', color: 'bg-green-500' },
+                  { key: 'kinesthetic' as const, label: 'Kinesthetic', emoji: '🤸', color: 'bg-orange-500' },
                 ].map(style => (
                   <div key={style.key}>
                     <div className="flex items-center justify-between text-sm mb-1">
@@ -336,13 +336,13 @@ export default function TeacherDashboardPage() {
                         <span className="text-gray-700">{style.label}</span>
                       </span>
                       <span className="font-semibold text-gray-900">
-                        {varkDistribution[style.key as keyof typeof varkDistribution]}%
+                        {varkDistribution[style.key]}%
                       </span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${style.color} rounded-full transition-all`}
-                        style={{ width: `${varkDistribution[style.key as keyof typeof varkDistribution]}%` }}
+                        style={{ width: `${varkDistribution[style.key]}%` }}
                       />
                     </div>
                   </div>

@@ -147,8 +147,8 @@ export default function DashboardPage() {
         }
 
         // Load enrolled classrooms
-        const { data: enrollments } = await supabase
-          .from('classroom_enrollments')
+        const { data: enrollments } = await (supabase
+          .from('classroom_enrollments') as any)
           .select('classroom_id, classrooms(id, name)')
           .eq('student_id', authUser.id)
           .eq('status', 'active');

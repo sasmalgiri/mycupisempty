@@ -36,31 +36,31 @@ export default function AssignmentsPage() {
 
     try {
       // Fetch classrooms
-      const { data: classroomsData } = await supabase
-        .from('classrooms')
+      const { data: classroomsData } = await (supabase
+        .from('classrooms') as any)
         .select('id, name')
         .eq('teacher_id', user.id);
 
-      setClassrooms(classroomsData || []);
+      setClassrooms((classroomsData || []) as { id: string; name: string }[]);
 
       // Fetch assignments
-      const { data: assignmentsData } = await supabase
-        .from('assignments')
+      const { data: assignmentsData } = await (supabase
+        .from('assignments') as any)
         .select('*, classrooms(name)')
         .eq('teacher_id', user.id)
         .order('created_at', { ascending: false });
 
       if (assignmentsData) {
         const assignmentsWithStats = await Promise.all(
-          assignmentsData.map(async (assignment) => {
-            const { count: submissionsCount } = await supabase
-              .from('assignment_submissions')
+          (assignmentsData as any[]).map(async (assignment: any) => {
+            const { count: submissionsCount } = await (supabase
+              .from('assignment_submissions') as any)
               .select('*', { count: 'exact', head: true })
               .eq('assignment_id', assignment.id)
               .in('status', ['submitted', 'graded']);
 
-            const { count: gradedCount } = await supabase
-              .from('assignment_submissions')
+            const { count: gradedCount } = await (supabase
+              .from('assignment_submissions') as any)
               .select('*', { count: 'exact', head: true })
               .eq('assignment_id', assignment.id)
               .eq('status', 'graded');

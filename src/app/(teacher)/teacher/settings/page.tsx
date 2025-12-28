@@ -28,7 +28,7 @@ export default function TeacherSettingsPage() {
         .from('profiles')
         .select('full_name, email, school_name, city, state')
         .eq('id', user.id)
-        .single();
+        .single() as { data: { full_name: string | null; email: string | null; school_name: string | null; city: string | null; state: string | null } | null };
 
       if (data) {
         setProfile({
@@ -52,8 +52,8 @@ export default function TeacherSettingsPage() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
-      const { error } = await supabase
-        .from('profiles')
+      const { error } = await (supabase
+        .from('profiles') as any)
         .update({
           full_name: profile.full_name,
           school_name: profile.school_name,

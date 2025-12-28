@@ -35,14 +35,14 @@ export default function NewClassroomPage() {
       .from('classes')
       .select('id')
       .eq('class_number', parseInt(formData.class_level))
-      .single();
+      .single() as { data: { id: string } | null };
 
     if (classData) {
       const { data: subjectsData } = await supabase
         .from('subjects')
         .select('id, name, code')
         .eq('class_id', classData.id)
-        .eq('is_active', true);
+        .eq('is_active', true) as { data: Subject[] | null };
 
       setSubjects(subjectsData || []);
     }
@@ -63,8 +63,8 @@ export default function NewClassroomPage() {
     }
 
     try {
-      const { data, error: insertError } = await supabase
-        .from('classrooms')
+      const { data, error: insertError } = await (supabase
+        .from('classrooms') as any)
         .insert({
           teacher_id: user.id,
           name: formData.name.trim(),
@@ -78,7 +78,7 @@ export default function NewClassroomPage() {
 
       if (insertError) throw insertError;
 
-      router.push(`/teacher/classrooms/${data.id}`);
+      router.push(`/teacher/classrooms/${(data as any).id}`);
     } catch (err: any) {
       console.error('Error creating classroom:', err);
       setError(err.message || 'Failed to create classroom');

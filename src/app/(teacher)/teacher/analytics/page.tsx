@@ -31,33 +31,33 @@ export default function AnalyticsPage() {
 
     try {
       // Fetch classrooms
-      const { data: classrooms, count: classroomCount } = await supabase
-        .from('classrooms')
+      const { data: classrooms, count: classroomCount } = await (supabase
+        .from('classrooms') as any)
         .select('id', { count: 'exact' })
         .eq('teacher_id', user.id)
         .eq('is_active', true);
 
       if (classrooms && classrooms.length > 0) {
-        const classroomIds = classrooms.map(c => c.id);
+        const classroomIds = (classrooms as any[]).map((c: any) => c.id);
 
         // Fetch enrollments
-        const { data: enrollments } = await supabase
-          .from('classroom_enrollments')
+        const { data: enrollments } = await (supabase
+          .from('classroom_enrollments') as any)
           .select('student_id')
           .in('classroom_id', classroomIds)
           .eq('status', 'active');
 
-        const studentIds = [...new Set(enrollments?.map(e => e.student_id) || [])];
+        const studentIds = [...new Set((enrollments as any[] || []).map((e: any) => e.student_id))] as string[];
 
         // Fetch learning styles
         const { data: learningStyles } = await supabase
           .from('learning_styles')
           .select('dominant_style')
-          .in('user_id', studentIds);
+          .in('user_id', studentIds) as { data: { dominant_style: string | null }[] | null };
 
         // Calculate VARK distribution
         const counts = { visual: 0, auditory: 0, reading: 0, kinesthetic: 0 };
-        learningStyles?.forEach(style => {
+        learningStyles?.forEach((style: { dominant_style: string | null }) => {
           if (style.dominant_style && style.dominant_style in counts) {
             counts[style.dominant_style as keyof typeof counts]++;
           }
@@ -75,11 +75,11 @@ export default function AnalyticsPage() {
         const { data: userStats } = await supabase
           .from('user_stats')
           .select('total_questions_answered, correct_answers')
-          .in('user_id', studentIds);
+          .in('user_id', studentIds) as { data: { total_questions_answered: number; correct_answers: number }[] | null };
 
         let totalQuestions = 0;
         let totalCorrect = 0;
-        userStats?.forEach(stat => {
+        userStats?.forEach((stat: { total_questions_answered: number; correct_answers: number }) => {
           totalQuestions += stat.total_questions_answered || 0;
           totalCorrect += stat.correct_answers || 0;
         });
