@@ -57,7 +57,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   // Route definitions
-  const studentRoutes = ['/dashboard', '/subjects', '/progress', '/achievements', '/assessment', '/settings', '/flashcards'];
+  const studentRoutes = ['/dashboard', '/daily-mix', '/subjects', '/progress', '/achievements', '/assessment', '/settings', '/flashcards', '/guru', '/activities', '/challenges', '/methods', '/learning-dna', '/style-discovery', '/my-teams', '/lifecycle', '/pedagogy', '/me', '/habits', '/reflect', '/goals', '/parent', '/badges', '/path-discovery', '/live-quiz'];
   const teacherRoutes = ['/teacher'];
   const authRoutes = ['/login', '/signup'];
 

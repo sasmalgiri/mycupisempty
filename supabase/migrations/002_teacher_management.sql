@@ -184,9 +184,9 @@ CREATE POLICY "Students can view enrolled classrooms" ON public.classrooms
         )
     );
 
--- Anyone can view classroom by invite code (for joining)
-CREATE POLICY "Anyone can lookup classroom by invite code" ON public.classrooms
-    FOR SELECT USING (is_active = true);
+-- NOTE: Do NOT add a public SELECT policy for invite-code lookup.
+-- That would allow listing all active classrooms. Use a server-side API route
+-- (e.g. /api/classrooms/lookup and /api/classrooms/join) for invite-code flows.
 
 -- ENROLLMENT POLICIES
 -- Teachers can manage enrollments in their classrooms

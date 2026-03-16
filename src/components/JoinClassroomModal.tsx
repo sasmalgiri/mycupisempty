@@ -22,23 +22,20 @@ export default function JoinClassroomModal({ isOpen, onClose, onSuccess }: JoinC
     setClassroomInfo(null);
 
     if (upperCode.length === 6) {
-      // Look up classroom
-      const supabase = createBrowserClient();
-      const { data: classroom } = await (supabase
-        .from('classrooms') as any)
-        .select('name, class_level, is_active')
-        .eq('invite_code', upperCode)
-        .single();
+      try {
+        const res = await fetch(`/api/classrooms/lookup?code=${encodeURIComponent(upperCode)}`);
+        const data = await res.json();
 
-      if (classroom && classroom.is_active) {
-        setClassroomInfo({
-          name: classroom.name,
-          class_level: classroom.class_level,
-        });
-      } else if (classroom && !classroom.is_active) {
-        setError('This classroom is no longer active');
-      } else {
-        setError('Invalid invite code');
+        if (res.ok) {
+          setClassroomInfo({
+            name: data.name,
+            class_level: data.class_level,
+          });
+        } else {
+          setError(data?.error || 'Invalid invite code');
+        }
+      } catch {
+        setError('Failed to validate invite code');
       }
     }
   };
@@ -62,71 +59,16 @@ export default function JoinClassroomModal({ isOpen, onClose, onSuccess }: JoinC
     }
 
     try {
-      // Find classroom by invite code
-      const { data: classroom, error: findError } = await (supabase
-        .from('classrooms') as any)
-        .select('id, name, max_students')
-        .eq('invite_code', inviteCode)
-        .eq('is_active', true)
-        .single();
+      const res = await fetch('/api/classrooms/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteCode }),
+      });
 
-      if (findError || !classroom) {
-        setError('Invalid or expired invite code');
-        setLoading(false);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || 'Failed to join classroom');
         return;
-      }
-
-      // Check if already enrolled
-      const { data: existingEnrollment } = await (supabase
-        .from('classroom_enrollments') as any)
-        .select('id, status')
-        .eq('classroom_id', classroom.id)
-        .eq('student_id', user.id)
-        .single();
-
-      if (existingEnrollment) {
-        if (existingEnrollment.status === 'active') {
-          setError('You are already enrolled in this classroom');
-        } else if (existingEnrollment.status === 'removed') {
-          setError('You were removed from this classroom');
-        } else {
-          // Re-enroll
-          await (supabase
-            .from('classroom_enrollments') as any)
-            .update({ status: 'active', joined_at: new Date().toISOString() })
-            .eq('id', existingEnrollment.id);
-
-          onSuccess();
-          handleClose();
-        }
-        setLoading(false);
-        return;
-      }
-
-      // Check classroom capacity
-      const { count: currentStudents } = await (supabase
-        .from('classroom_enrollments') as any)
-        .select('*', { count: 'exact', head: true })
-        .eq('classroom_id', classroom.id)
-        .eq('status', 'active');
-
-      if (currentStudents && currentStudents >= classroom.max_students) {
-        setError('This classroom is full');
-        setLoading(false);
-        return;
-      }
-
-      // Enroll student
-      const { error: enrollError } = await (supabase
-        .from('classroom_enrollments') as any)
-        .insert({
-          classroom_id: classroom.id,
-          student_id: user.id,
-          status: 'active',
-        });
-
-      if (enrollError) {
-        throw enrollError;
       }
 
       onSuccess();

@@ -462,25 +462,66 @@ export default function DashboardPage() {
               ))}
             </div>
 
+            {/* Quick Access - New Features */}
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Link
+                href="/guru"
+                className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl p-6 text-white hover:shadow-lg hover:-translate-y-1 transition-all"
+              >
+                <span className="text-3xl block mb-2">🧙</span>
+                <h3 className="font-bold text-lg">AI Guru</h3>
+                <p className="text-white/80 text-sm">Your personal learning companion</p>
+              </Link>
+
+              <Link
+                href="/activities"
+                className="bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl p-6 text-white hover:shadow-lg hover:-translate-y-1 transition-all"
+              >
+                <span className="text-3xl block mb-2">🎮</span>
+                <h3 className="font-bold text-lg">Activities</h3>
+                <p className="text-white/80 text-sm">Games, puzzles & challenges</p>
+              </Link>
+
+              <Link
+                href="/learning-dna"
+                className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl p-6 text-white hover:shadow-lg hover:-translate-y-1 transition-all"
+              >
+                <span className="text-3xl block mb-2">🧬</span>
+                <h3 className="font-bold text-lg">Learning DNA</h3>
+                <p className="text-white/80 text-sm">Discover how you learn best</p>
+              </Link>
+            </div>
+
             {/* Learning Methods */}
             <div className="mt-8 bg-white rounded-2xl shadow-sm p-6">
-              <h3 className="font-bold mb-4">🎯 Learning Methods We Use</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold">🎯 Learning Methods We Use</h3>
+                <Link href="/methods" className="text-primary-600 hover:text-primary-700 text-sm font-semibold">
+                  View All 20+ →
+                </Link>
+              </div>
               <div className="grid grid-cols-5 gap-3">
                 {[
-                  { icon: '📊', name: 'VARK', desc: 'Learning Styles' },
-                  { icon: '🧠', name: 'Multiple Intel.', desc: "Gardner's 8 Types" },
-                  { icon: '🔺', name: "Bloom's", desc: '6 Thinking Levels' },
-                  { icon: '🔄', name: "Kolb's Cycle", desc: 'Learn by Doing' },
-                  { icon: '📅', name: 'Spaced Rep.', desc: 'Optimal Review' },
+                  { icon: '📊', name: 'VARK', desc: 'Learning Styles', href: '/learning-dna' },
+                  { icon: '🧠', name: 'Multiple Intel.', desc: "Gardner's 8 Types", href: '/learning-dna' },
+                  { icon: '🔺', name: "Bloom's", desc: '6 Thinking Levels', href: '/methods' },
+                  { icon: '🔄', name: "Kolb's Cycle", desc: 'Learn by Doing', href: '/assessment/kolb' },
+                  { icon: '📅', name: 'Spaced Rep.', desc: 'Optimal Review', href: '/flashcards' },
+                  { icon: '🕉️', name: 'Vedic Math', desc: 'Ancient Shortcuts', href: '/guru?method=vedic_math' },
+                  { icon: '🏰', name: 'Memory Palace', desc: 'Visual Memory', href: '/guru?method=memory_palace' },
+                  { icon: '❓', name: 'Socratic', desc: 'Learn by Questions', href: '/guru?method=socratic' },
+                  { icon: '📚', name: 'Storytelling', desc: 'Learn through Tales', href: '/guru?method=storytelling' },
+                  { icon: '🎯', name: 'Feynman', desc: 'Simplify & Teach', href: '/guru?method=feynman' },
                 ].map((method) => (
-                  <div
+                  <Link
                     key={method.name}
+                    href={method.href}
                     className="text-center p-3 bg-gray-50 rounded-xl hover:bg-primary-50 transition-colors cursor-pointer"
                   >
                     <div className="text-2xl mb-1">{method.icon}</div>
                     <div className="font-semibold text-xs">{method.name}</div>
                     <div className="text-xs text-gray-500">{method.desc}</div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>

@@ -105,6 +105,19 @@ export async function GET(request: NextRequest) {
 // POST /api/curriculum/seed - Seed curriculum data (admin only)
 export async function POST(request: NextRequest) {
   try {
+    // Protect this endpoint: it uses the service-role key (bypasses RLS)
+    const authHeader = request.headers.get('authorization') || '';
+    const seedToken = process.env.SEED_ADMIN_TOKEN;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    // Prefer a dedicated token, but allow service-role key for backward-compat with docs.
+    const allowedTokens = [seedToken, serviceRoleKey].filter(Boolean) as string[];
+    const isAuthorized = allowedTokens.some((token) => authHeader === `Bearer ${token}`);
+
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabase = createAdminClient();
     const body = await request.json();
     const { action } = body;

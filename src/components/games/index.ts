@@ -1,0 +1,9 @@
+export { default as GameWrapper } from './GameWrapper';
+export { default as WordPuzzle } from './WordPuzzle';
+export { default as NumberGame } from './NumberGame';
+export { default as ConceptMatch } from './ConceptMatch';
+export { default as SequenceArrange } from './SequenceArrange';
+export { default as CaseStudy } from './CaseStudy';
+export { default as TimedChallenge } from './TimedChallenge';
+export { default as VirtualLab } from './VirtualLab';
+export { default as CreativeProject } from './CreativeProject';

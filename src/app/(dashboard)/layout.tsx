@@ -3,12 +3,32 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import UnstuckButton from '@/components/UnstuckButton';
 
 const navItems = [
   { href: '/dashboard', icon: '🏠', label: 'Dashboard' },
+  { href: '/daily-mix', icon: '🎯', label: 'Daily Mix' },
+  { href: '/me', icon: '🌟', label: 'My Development' },
+  // Learn
   { href: '/subjects', icon: '📚', label: 'Subjects' },
+  { href: '/pedagogy', icon: '🧪', label: 'Learning Engine' },
+  { href: '/guru', icon: '🧙', label: 'AI Guru' },
+  { href: '/methods', icon: '📖', label: 'Methods' },
+  // Think
+  { href: '/activities', icon: '🎮', label: 'Activities' },
+  { href: '/challenges', icon: '🏆', label: 'Challenges' },
+  { href: '/flashcards', icon: '🃏', label: 'Flashcards' },
+  // Grow
+  { href: '/habits', icon: '📏', label: 'Habits' },
+  { href: '/reflect', icon: '🪞', label: 'Reflect' },
+  { href: '/goals', icon: '🎯', label: 'Goals' },
+  // Live & Path
+  { href: '/live-quiz', icon: '🎮', label: 'Live Quiz' },
+  { href: '/parent', icon: '👨‍👩‍👧', label: 'Parent View' },
+  // Legacy
+  { href: '/style-discovery', icon: '🧬', label: 'My Style' },
   { href: '/progress', icon: '📊', label: 'Progress' },
-  { href: '/achievements', icon: '🏆', label: 'Achievements' }
+  { href: '/achievements', icon: '⭐', label: 'Achievements' },
 ];
 
 export default function DashboardLayout({
@@ -148,6 +168,9 @@ export default function DashboardLayout({
 
         {/* Page Content */}
         {children}
+
+        {/* Unstuck floating button — appears on all student pages */}
+        <UnstuckButton />
       </div>
     </div>
   );

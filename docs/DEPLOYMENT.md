@@ -192,6 +192,7 @@ Add the following environment variables in Vercel:
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxxx.supabase.co` | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbG...` | Your Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | `eyJhbG...` | Your Supabase service role key |
+| `SEED_ADMIN_TOKEN` | `your-long-random-string` | Protects admin seed endpoint |
 | `OLLAMA_BASE_URL` | `http://YOUR_ORACLE_VM_IP:11434` | Your Oracle VM Ollama URL |
 | `OLLAMA_MODEL` | `llama3.2` | Default model to use |
 | `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` | Your deployment URL |
@@ -218,7 +219,7 @@ npm run seed
 Or use the API endpoint:
 ```bash
 curl -X POST https://your-app.vercel.app/api/curriculum \
-  -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY"
+   -H "Authorization: Bearer YOUR_SEED_ADMIN_TOKEN"
 ```
 
 ### 2. Configure Custom Domain (Optional)

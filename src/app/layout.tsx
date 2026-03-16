@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Nunito, Crimson_Pro, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
+import BuddyAssistant from '@/components/BuddyAssistant';
 
 const nunito = Nunito({
   subsets: ['latin'],
@@ -22,8 +23,8 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'MyCupIsEmpty - AI-Powered Adaptive Learning Platform',
-  description: 'Personalized NCERT education using 15+ scientific learning methods. Every student can learn - in their own way.',
-  keywords: ['NCERT', 'education', 'learning', 'AI tutor', 'adaptive learning', 'CBSE', 'Class 1-12'],
+  description: 'Personalized education using 20+ ancient & modern learning methods. AI Guru, interactive games, character building. Every student can learn - in their own way.',
+  keywords: ['NCERT', 'CBSE', 'ICSE', 'education', 'learning', 'AI tutor', 'adaptive learning', 'Vedic Math', 'Gurukul', 'Class 1-12', 'games', 'puzzles'],
   authors: [{ name: 'MyCupIsEmpty' }],
   openGraph: {
     title: 'MyCupIsEmpty - AI-Powered Adaptive Learning',
@@ -42,6 +43,7 @@ export default function RootLayout({
     <html lang="en" className={`${nunito.variable} ${crimsonPro.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans antialiased">
         {children}
+        <BuddyAssistant />
       </body>
     </html>
   );

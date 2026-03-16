@@ -9,9 +9,14 @@ const navItems = [
   { href: '/teacher/dashboard', icon: '🏠', label: 'Dashboard' },
   { href: '/teacher/classrooms', icon: '🏫', label: 'Classrooms' },
   { href: '/teacher/students', icon: '👨‍🎓', label: 'Students' },
+  { href: '/teacher/teams', icon: '👥', label: 'Style Teams' },
+  { href: '/teacher/pedagogy', icon: '🧪', label: 'Pedagogy Engine' },
+  { href: '/teacher/development', icon: '🌟', label: 'Development' },
   { href: '/teacher/assignments', icon: '📝', label: 'Assignments' },
   { href: '/teacher/analytics', icon: '📊', label: 'Analytics' },
   { href: '/teacher/reports', icon: '📋', label: 'Reports' },
+  { href: '/teacher/live-quiz', icon: '🎮', label: 'Live Quiz' },
+  { href: '/teacher/papers', icon: '📄', label: 'Paper Gen' },
 ];
 
 export default function TeacherLayout({

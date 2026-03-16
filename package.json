@@ -11,7 +11,8 @@
     "db:migrate": "supabase db push",
     "db:generate": "supabase gen types typescript --local > src/types/database.ts",
     "scrape:ncert": "npx tsx scripts/ncert-scraper.ts",
-    "seed": "npx tsx scripts/seed-database.ts"
+    "seed": "npx tsx scripts/seed-database.ts",
+    "seed:wb5": "npx tsx scripts/seed-wb-class5.ts"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
