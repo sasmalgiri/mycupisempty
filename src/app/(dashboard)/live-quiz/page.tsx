@@ -235,7 +235,7 @@ export default function StudentLiveQuizPage() {
                   key={p.id}
                   className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
                 >
-                  {p.profiles?.full_name || p.nickname}
+                  {p.profiles?.full_name || p.display_name}
                 </span>
               ))}
             </div>
@@ -455,7 +455,7 @@ export default function StudentLiveQuizPage() {
                       #{i + 1}
                     </span>
                     <span className={`flex-1 font-medium truncate ${isMe ? 'text-blue-700' : 'text-gray-700'}`}>
-                      {p.profiles?.full_name || p.nickname}
+                      {p.profiles?.full_name || p.display_name}
                       {isMe && ' (You)'}
                     </span>
                     <span className="font-bold text-gray-600">{p.total_score}</span>

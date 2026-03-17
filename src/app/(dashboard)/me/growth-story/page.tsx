@@ -9,7 +9,7 @@ interface GrowthStory {
   period_start: string;
   period_end: string;
   story_type: string;
-  narrative: string;
+  narrative_text: string;
   highlights?: string[];
   data_context?: Record<string, any>;
   created_at: string;
@@ -125,14 +125,14 @@ export default function GrowthStoryPage() {
 
   const handleShare = (type: 'parent' | 'teacher', story: GrowthStory) => {
     // In production, this would create a sharing link or notification
-    const message = `Growth Story (${story.period_start} to ${story.period_end}): ${story.narrative.slice(0, 200)}...`;
+    const message = `Growth Story (${story.period_start} to ${story.period_end}): ${story.narrative_text.slice(0, 200)}...`;
     if (navigator.share) {
       navigator.share({
         title: `My Growth Story - ${STORY_TYPE_CONFIG[story.story_type]?.label || 'Growth Story'}`,
         text: message,
       }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(story.narrative).then(() => {
+      navigator.clipboard.writeText(story.narrative_text).then(() => {
         alert(`Story copied to clipboard! Share it with your ${type}.`);
       }).catch(() => {});
     }
@@ -397,7 +397,7 @@ export default function GrowthStoryPage() {
                             {/* Narrative */}
                             <div className="mt-4 mb-6 prose prose-sm max-w-none">
                               <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                                {story.narrative}
+                                {story.narrative_text}
                               </div>
                             </div>
 

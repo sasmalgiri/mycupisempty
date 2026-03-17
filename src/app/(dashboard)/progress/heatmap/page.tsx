@@ -8,25 +8,25 @@ interface TopicMastery {
   topic_title: string;
   chapter_title: string;
   subject_name: string;
-  mastery_recall: number;
-  mastery_comprehension: number;
-  mastery_application: number;
-  mastery_transfer: number;
-  mastery_retention: number;
-  mastery_metacognition: number;
-  mastery_independence: number;
+  mastery_score_recall: number;
+  mastery_score_comprehension: number;
+  mastery_score_application: number;
+  mastery_score_transfer: number;
+  mastery_score_retention: number;
+  mastery_score_metacognition: number;
+  mastery_score_independence: number;
   mastery_total: number;
   mastery_band: string;
 }
 
 const MASTERY_COMPONENTS = [
-  { key: 'mastery_recall', label: 'Recall', shortLabel: 'RCL' },
-  { key: 'mastery_comprehension', label: 'Comprehension', shortLabel: 'CMP' },
-  { key: 'mastery_application', label: 'Application', shortLabel: 'APP' },
-  { key: 'mastery_transfer', label: 'Transfer', shortLabel: 'TRF' },
-  { key: 'mastery_retention', label: 'Retention', shortLabel: 'RTN' },
-  { key: 'mastery_metacognition', label: 'Metacognition', shortLabel: 'MTC' },
-  { key: 'mastery_independence', label: 'Independence', shortLabel: 'IND' },
+  { key: 'mastery_score_recall', label: 'Recall', shortLabel: 'RCL' },
+  { key: 'mastery_score_comprehension', label: 'Comprehension', shortLabel: 'CMP' },
+  { key: 'mastery_score_application', label: 'Application', shortLabel: 'APP' },
+  { key: 'mastery_score_transfer', label: 'Transfer', shortLabel: 'TRF' },
+  { key: 'mastery_score_retention', label: 'Retention', shortLabel: 'RTN' },
+  { key: 'mastery_score_metacognition', label: 'Metacognition', shortLabel: 'MTC' },
+  { key: 'mastery_score_independence', label: 'Independence', shortLabel: 'IND' },
 ] as const;
 
 type MasteryKey = typeof MASTERY_COMPONENTS[number]['key'];
@@ -366,13 +366,13 @@ export default function WeaknessHeatMapPage() {
 // Mock data for development/fallback
 function getMockData(): TopicMastery[] {
   return [
-    { topic_id: '1', topic_title: 'Photosynthesis', chapter_title: 'Life Processes', subject_name: 'Science', mastery_recall: 82, mastery_comprehension: 71, mastery_application: 55, mastery_transfer: 40, mastery_retention: 68, mastery_metacognition: 45, mastery_independence: 50, mastery_total: 59, mastery_band: 'developing' },
-    { topic_id: '2', topic_title: 'Linear Equations', chapter_title: 'Algebra', subject_name: 'Mathematics', mastery_recall: 90, mastery_comprehension: 85, mastery_application: 78, mastery_transfer: 65, mastery_retention: 80, mastery_metacognition: 70, mastery_independence: 72, mastery_total: 77, mastery_band: 'proficient' },
-    { topic_id: '3', topic_title: 'Acids and Bases', chapter_title: 'Chemical Reactions', subject_name: 'Science', mastery_recall: 60, mastery_comprehension: 50, mastery_application: 35, mastery_transfer: 25, mastery_retention: 45, mastery_metacognition: 30, mastery_independence: 28, mastery_total: 39, mastery_band: 'emerging' },
-    { topic_id: '4', topic_title: 'Quadratic Equations', chapter_title: 'Algebra', subject_name: 'Mathematics', mastery_recall: 75, mastery_comprehension: 68, mastery_application: 60, mastery_transfer: 52, mastery_retention: 70, mastery_metacognition: 55, mastery_independence: 48, mastery_total: 61, mastery_band: 'developing' },
-    { topic_id: '5', topic_title: 'Tenses', chapter_title: 'Grammar', subject_name: 'English', mastery_recall: 95, mastery_comprehension: 92, mastery_application: 88, mastery_transfer: 80, mastery_retention: 90, mastery_metacognition: 85, mastery_independence: 82, mastery_total: 87, mastery_band: 'mastered' },
-    { topic_id: '6', topic_title: 'French Revolution', chapter_title: 'Modern History', subject_name: 'Social Science', mastery_recall: 70, mastery_comprehension: 55, mastery_application: 42, mastery_transfer: 30, mastery_retention: 50, mastery_metacognition: 35, mastery_independence: 32, mastery_total: 45, mastery_band: 'emerging' },
-    { topic_id: '7', topic_title: 'Respiration', chapter_title: 'Life Processes', subject_name: 'Science', mastery_recall: 78, mastery_comprehension: 65, mastery_application: 50, mastery_transfer: 38, mastery_retention: 60, mastery_metacognition: 42, mastery_independence: 40, mastery_total: 53, mastery_band: 'developing' },
-    { topic_id: '8', topic_title: 'Triangles', chapter_title: 'Geometry', subject_name: 'Mathematics', mastery_recall: 88, mastery_comprehension: 80, mastery_application: 72, mastery_transfer: 60, mastery_retention: 75, mastery_metacognition: 65, mastery_independence: 58, mastery_total: 71, mastery_band: 'proficient' },
+    { topic_id: '1', topic_title: 'Photosynthesis', chapter_title: 'Life Processes', subject_name: 'Science', mastery_score_recall: 82, mastery_score_comprehension: 71, mastery_score_application: 55, mastery_score_transfer: 40, mastery_score_retention: 68, mastery_score_metacognition: 45, mastery_score_independence: 50, mastery_total: 59, mastery_band: 'developing' },
+    { topic_id: '2', topic_title: 'Linear Equations', chapter_title: 'Algebra', subject_name: 'Mathematics', mastery_score_recall: 90, mastery_score_comprehension: 85, mastery_score_application: 78, mastery_score_transfer: 65, mastery_score_retention: 80, mastery_score_metacognition: 70, mastery_score_independence: 72, mastery_total: 77, mastery_band: 'proficient' },
+    { topic_id: '3', topic_title: 'Acids and Bases', chapter_title: 'Chemical Reactions', subject_name: 'Science', mastery_score_recall: 60, mastery_score_comprehension: 50, mastery_score_application: 35, mastery_score_transfer: 25, mastery_score_retention: 45, mastery_score_metacognition: 30, mastery_score_independence: 28, mastery_total: 39, mastery_band: 'emerging' },
+    { topic_id: '4', topic_title: 'Quadratic Equations', chapter_title: 'Algebra', subject_name: 'Mathematics', mastery_score_recall: 75, mastery_score_comprehension: 68, mastery_score_application: 60, mastery_score_transfer: 52, mastery_score_retention: 70, mastery_score_metacognition: 55, mastery_score_independence: 48, mastery_total: 61, mastery_band: 'developing' },
+    { topic_id: '5', topic_title: 'Tenses', chapter_title: 'Grammar', subject_name: 'English', mastery_score_recall: 95, mastery_score_comprehension: 92, mastery_score_application: 88, mastery_score_transfer: 80, mastery_score_retention: 90, mastery_score_metacognition: 85, mastery_score_independence: 82, mastery_total: 87, mastery_band: 'mastered' },
+    { topic_id: '6', topic_title: 'French Revolution', chapter_title: 'Modern History', subject_name: 'Social Science', mastery_score_recall: 70, mastery_score_comprehension: 55, mastery_score_application: 42, mastery_score_transfer: 30, mastery_score_retention: 50, mastery_score_metacognition: 35, mastery_score_independence: 32, mastery_total: 45, mastery_band: 'emerging' },
+    { topic_id: '7', topic_title: 'Respiration', chapter_title: 'Life Processes', subject_name: 'Science', mastery_score_recall: 78, mastery_score_comprehension: 65, mastery_score_application: 50, mastery_score_transfer: 38, mastery_score_retention: 60, mastery_score_metacognition: 42, mastery_score_independence: 40, mastery_total: 53, mastery_band: 'developing' },
+    { topic_id: '8', topic_title: 'Triangles', chapter_title: 'Geometry', subject_name: 'Mathematics', mastery_score_recall: 88, mastery_score_comprehension: 80, mastery_score_application: 72, mastery_score_transfer: 60, mastery_score_retention: 75, mastery_score_metacognition: 65, mastery_score_independence: 58, mastery_total: 71, mastery_band: 'proficient' },
   ];
 }
