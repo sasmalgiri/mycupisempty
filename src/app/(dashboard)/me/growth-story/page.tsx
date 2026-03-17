@@ -11,7 +11,9 @@ interface GrowthStory {
   story_type: string;
   narrative_text: string;
   highlights?: string[];
-  data_context?: Record<string, any>;
+  academic_snapshot?: Record<string, any>;
+  engagement_snapshot?: Record<string, any>;
+  development_snapshot?: Record<string, any>;
   created_at: string;
 }
 
@@ -416,30 +418,30 @@ export default function GrowthStoryPage() {
                               </div>
                             )}
 
-                            {/* Data Context Summary */}
-                            {story.data_context && (
+                            {/* Snapshot Summary */}
+                            {(story.academic_snapshot || story.engagement_snapshot) && (
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                                {story.data_context.total_topics > 0 && (
+                                {story.academic_snapshot?.total_topics > 0 && (
                                   <div className="p-3 bg-blue-50 rounded-xl text-center">
-                                    <p className="text-lg font-bold text-blue-700">{story.data_context.total_topics}</p>
+                                    <p className="text-lg font-bold text-blue-700">{story.academic_snapshot?.total_topics}</p>
                                     <p className="text-[10px] text-blue-500">Topics Studied</p>
                                   </div>
                                 )}
-                                {story.data_context.topics_mastered > 0 && (
+                                {story.academic_snapshot?.topics_mastered > 0 && (
                                   <div className="p-3 bg-green-50 rounded-xl text-center">
-                                    <p className="text-lg font-bold text-green-700">{story.data_context.topics_mastered}</p>
+                                    <p className="text-lg font-bold text-green-700">{story.academic_snapshot?.topics_mastered}</p>
                                     <p className="text-[10px] text-green-500">Topics Mastered</p>
                                   </div>
                                 )}
-                                {story.data_context.habit_completions > 0 && (
+                                {story.engagement_snapshot?.habit_completions > 0 && (
                                   <div className="p-3 bg-purple-50 rounded-xl text-center">
-                                    <p className="text-lg font-bold text-purple-700">{story.data_context.habit_completions}</p>
+                                    <p className="text-lg font-bold text-purple-700">{story.engagement_snapshot?.habit_completions}</p>
                                     <p className="text-[10px] text-purple-500">Habit Check-ins</p>
                                   </div>
                                 )}
-                                {story.data_context.reflection_count > 0 && (
+                                {story.engagement_snapshot?.reflection_count > 0 && (
                                   <div className="p-3 bg-amber-50 rounded-xl text-center">
-                                    <p className="text-lg font-bold text-amber-700">{story.data_context.reflection_count}</p>
+                                    <p className="text-lg font-bold text-amber-700">{story.engagement_snapshot?.reflection_count}</p>
                                     <p className="text-[10px] text-amber-500">Reflections</p>
                                   </div>
                                 )}

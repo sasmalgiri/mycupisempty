@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
             .update({
               total_xp: (stats.total_xp || 0) + xpEarned,
               current_streak: (stats.current_streak || 0) + 1,
-              last_active_date: getTodayDateString(),
+              last_activity_date: getTodayDateString(),
             })
             .eq('user_id', user.id);
         }

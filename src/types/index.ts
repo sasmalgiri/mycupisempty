@@ -227,13 +227,13 @@ export interface UserStats {
   id: string;
   user_id: string;
   total_xp: number;
-  current_level: number;
+  level: number;
   current_streak: number;
   longest_streak: number;
   total_time_spent_minutes: number;
-  total_questions_attempted: number;
-  total_questions_correct: number;
-  last_active_date: string;
+  total_questions_answered: number;
+  correct_answers: number;
+  last_activity_date: string;
 }
 
 export interface DailyGoal {

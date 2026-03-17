@@ -291,7 +291,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-lg">{user?.full_name || 'Student'}</h3>
-                  <p className="text-gray-500 text-sm">Class {user?.current_class || 6} • Level {stats?.current_level || 1}</p>
+                  <p className="text-gray-500 text-sm">Class {user?.current_class || 6} • Level {stats?.level || 1}</p>
                 </div>
               </div>
 
@@ -343,13 +343,13 @@ export default function DashboardPage() {
               <h4 className="font-bold mb-4">📊 Your Stats</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-primary-600">{stats?.total_questions_attempted || 0}</div>
+                  <div className="text-2xl font-bold text-primary-600">{stats?.total_questions_answered || 0}</div>
                   <div className="text-xs text-gray-500">Questions</div>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-4 text-center">
                   <div className="text-2xl font-bold text-green-600">
-                    {stats?.total_questions_attempted
-                      ? Math.round((stats.total_questions_correct / stats.total_questions_attempted) * 100)
+                    {stats?.total_questions_answered
+                      ? Math.round((stats.correct_answers / stats.total_questions_answered) * 100)
                       : 0}%
                   </div>
                   <div className="text-xs text-gray-500">Accuracy</div>
