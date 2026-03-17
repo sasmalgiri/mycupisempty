@@ -151,7 +151,7 @@ export default function DashboardPage() {
           .from('classroom_enrollments') as any)
           .select('classroom_id, classrooms(id, name)')
           .eq('student_id', authUser.id)
-          .eq('is_active', true);
+          .eq('status', 'active');
 
         if (enrollments) {
           const classroomsList = enrollments

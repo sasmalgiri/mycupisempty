@@ -165,12 +165,12 @@ export default function AssessmentPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase.from('learning_styles') as any).upsert({
           user_id: user.id,
-          visual: results.visual,
-          auditory: results.auditory,
-          reading: results.reading,
-          kinesthetic: results.kinesthetic,
-          primary_style: results.primary,
-          assessed_at: new Date().toISOString(),
+          visual_score: results.visual,
+          auditory_score: results.auditory,
+          reading_score: results.reading,
+          kinesthetic_score: results.kinesthetic,
+          dominant_style: results.primary,
+          assessment_date: new Date().toISOString(),
         });
       }
 
