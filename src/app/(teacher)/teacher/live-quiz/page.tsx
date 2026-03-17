@@ -14,7 +14,7 @@ interface Question {
 interface Participant {
   id: string;
   user_id: string;
-  nickname: string;
+  display_name: string;
   total_score: number;
   answers: any[];
   rank?: number;
@@ -87,8 +87,8 @@ export default function TeacherLiveQuizPage() {
     const fetchTopics = async () => {
       const supabase = createBrowserClient();
       const { data } = await (supabase.from('topics') as any)
-        .select('id, name')
-        .eq('subject_id', subjectId);
+        .select('id, title, chapters!inner(subject_id)')
+        .eq('chapters.subject_id', subjectId);
       setTopics(data || []);
     };
     fetchTopics();
@@ -322,7 +322,7 @@ export default function TeacherLiveQuizPage() {
               >
                 <option value="">Select topic</option>
                 {topics.map((t: any) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
+                  <option key={t.id} value={t.id}>{t.title}</option>
                 ))}
               </select>
             </div>
@@ -511,7 +511,7 @@ export default function TeacherLiveQuizPage() {
                         key={p.id}
                         className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full font-medium text-sm animate-pulse"
                       >
-                        {p.profiles?.full_name || p.nickname}
+                        {p.profiles?.full_name || p.display_name}
                       </div>
                     ))}
                   </div>
@@ -619,7 +619,7 @@ export default function TeacherLiveQuizPage() {
                       #{i + 1}
                     </span>
                     <span className="flex-1 font-medium text-gray-700 truncate">
-                      {p.profiles?.full_name || p.nickname}
+                      {p.profiles?.full_name || p.display_name}
                     </span>
                     <span className="font-bold text-blue-600">{p.total_score}</span>
                   </div>
@@ -645,7 +645,7 @@ export default function TeacherLiveQuizPage() {
                       2
                     </div>
                     <p className="font-bold text-gray-700 text-sm mb-1 truncate max-w-[100px]">
-                      {sortedParticipants[1].profiles?.full_name || sortedParticipants[1].nickname}
+                      {sortedParticipants[1].profiles?.full_name || sortedParticipants[1].display_name}
                     </p>
                     <p className="text-gray-500 text-xs mb-2">{sortedParticipants[1].total_score} pts</p>
                     <div className="w-24 bg-gradient-to-t from-gray-300 to-gray-200 rounded-t-xl h-32"></div>
@@ -660,7 +660,7 @@ export default function TeacherLiveQuizPage() {
                       1
                     </div>
                     <p className="font-bold text-gray-900 mb-1 truncate max-w-[120px]">
-                      {sortedParticipants[0].profiles?.full_name || sortedParticipants[0].nickname}
+                      {sortedParticipants[0].profiles?.full_name || sortedParticipants[0].display_name}
                     </p>
                     <p className="text-gray-500 text-sm mb-2">{sortedParticipants[0].total_score} pts</p>
                     <div className="w-28 bg-gradient-to-t from-yellow-400 to-yellow-200 rounded-t-xl h-44"></div>
@@ -674,7 +674,7 @@ export default function TeacherLiveQuizPage() {
                       3
                     </div>
                     <p className="font-bold text-gray-700 text-sm mb-1 truncate max-w-[100px]">
-                      {sortedParticipants[2].profiles?.full_name || sortedParticipants[2].nickname}
+                      {sortedParticipants[2].profiles?.full_name || sortedParticipants[2].display_name}
                     </p>
                     <p className="text-gray-500 text-xs mb-2">{sortedParticipants[2].total_score} pts</p>
                     <div className="w-20 bg-gradient-to-t from-orange-300 to-orange-200 rounded-t-xl h-24"></div>
@@ -693,7 +693,7 @@ export default function TeacherLiveQuizPage() {
                     >
                       <span className="font-black text-lg w-8 text-gray-400">#{i + 1}</span>
                       <span className="flex-1 font-medium text-gray-700">
-                        {p.profiles?.full_name || p.nickname}
+                        {p.profiles?.full_name || p.display_name}
                       </span>
                       <span className="font-bold text-blue-600">{p.total_score} pts</span>
                       <span className="text-xs text-gray-400">

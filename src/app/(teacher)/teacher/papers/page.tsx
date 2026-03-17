@@ -78,7 +78,7 @@ export default function TeacherPapersPage() {
   const fetchChapters = async () => {
     const supabase = createBrowserClient();
     const { data } = await (supabase.from('chapters') as any)
-      .select('id, name, chapter_number')
+      .select('id, title, chapter_number')
       .eq('subject_id', selectedSubject)
       .order('chapter_number');
     setChapters(data || []);
@@ -270,7 +270,7 @@ export default function TeacherPapersPage() {
                       className="w-4 h-4 text-blue-600 rounded"
                     />
                     <span className="text-sm text-gray-700">
-                      {c.chapter_number ? `Ch ${c.chapter_number}: ` : ''}{c.name}
+                      {c.chapter_number ? `Ch ${c.chapter_number}: ` : ''}{c.title}
                     </span>
                   </label>
                 ))}
