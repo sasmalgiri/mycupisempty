@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
     // Get user's learning style
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: learningStyle } = await (supabase.from('learning_styles') as any)
-      .select('primary_style')
+      .select('dominant_style')
       .eq('user_id', user.id)
       .single();
 
-    const userLearningStyle: VARKStyle = learningStyle?.primary_style || 'visual';
+    const userLearningStyle: VARKStyle = learningStyle?.dominant_style || 'visual';
 
     // Get previous messages for context (if session exists)
     let previousMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];

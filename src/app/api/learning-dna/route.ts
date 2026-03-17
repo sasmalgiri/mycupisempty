@@ -30,7 +30,7 @@ export async function GET() {
     let gardnerTop3: string[] = [];
     if (gardner.data) {
       const scores = Object.entries(gardner.data)
-        .filter(([k]) => !['id', 'user_id', 'assessed_at', 'created_at', 'updated_at'].includes(k))
+        .filter(([k]) => !['id', 'user_id', 'assessment_date', 'created_at'].includes(k))
         .sort(([, a], [, b]) => (b as number) - (a as number))
         .slice(0, 3);
       gardnerTop3 = scores.map(([k]) => k);
@@ -40,15 +40,15 @@ export async function GET() {
     const fullDNA = {
       ...(dna.data || {}),
       user_id: user.id,
-      vark_primary: vark.data?.primary_style || null,
+      vark_primary: vark.data?.dominant_style || null,
       gardner_top_3: gardnerTop3,
       kolb_type: kolb.data?.kolb_type || null,
       profile_completeness: completeness,
       vark_scores: vark.data ? {
-        visual: vark.data.visual,
-        auditory: vark.data.auditory,
-        reading: vark.data.reading,
-        kinesthetic: vark.data.kinesthetic,
+        visual: vark.data.visual_score,
+        auditory: vark.data.auditory_score,
+        reading: vark.data.reading_score,
+        kinesthetic: vark.data.kinesthetic_score,
       } : undefined,
       kolb_scores: kolb.data ? {
         ce: kolb.data.concrete_experience,

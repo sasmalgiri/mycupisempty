@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Get user's learning style
     const { data: learningStyle } = await supabase
       .from('learning_styles')
-      .select('primary_style')
+      .select('dominant_style')
       .eq('user_id', user.id)
       .single();
 
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         classLevel: profile?.current_class || 8,
         subject: subjectName,
         topic: topicName,
-        learningStyle: (learningStyle?.primary_style as VARKStyle) || 'visual',
+        learningStyle: (learningStyle?.dominant_style as VARKStyle) || 'visual',
         teachingMethod: teaching_method,
         difficultyLevel: difficulty_level,
         isSocratic: is_socratic,

@@ -129,8 +129,8 @@ export async function POST(request: NextRequest) {
     // Seed classes 1-12
     const classes = Array.from({ length: 12 }, (_, i) => ({
       class_number: i + 1,
-      display_name: `Class ${i + 1}`,
-      display_name_hindi: `कक्षा ${i + 1}`,
+      name: `Class ${i + 1}`,
+      description: `कक्षा ${i + 1}`,
     }));
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
               .upsert({
                 subject_id: insertedSubject.id,
                 ...chapter,
-                pdf_url: `https://ncert.nic.in/textbook/pdf/${subject.book_code}${String(chapter.chapter_number).padStart(2, '0')}.pdf`,
+                ncert_pdf_url: `https://ncert.nic.in/textbook/pdf/${subject.book_code}${String(chapter.chapter_number).padStart(2, '0')}.pdf`,
               }, { onConflict: 'subject_id,chapter_number' });
           }
         }
