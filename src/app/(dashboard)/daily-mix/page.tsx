@@ -7,12 +7,15 @@ import Link from 'next/link';
 interface SpacedRepItem {
   id: string;
   question_text: string;
-  answer_text: string;
-  difficulty: string;
+  answer: any;
+  item_type: string;
   topics?: { title: string };
 }
 
-interface MixData {
+interface Session {
+  id: string;
+  session_date: string;
+  status: string;
   spaced_rep_items: SpacedRepItem[];
   new_concept: {
     topic_id: string;
@@ -22,9 +25,9 @@ interface MixData {
   habit_check: {
     id: string;
     habit_id: string;
-    habit_definitions?: { id: string; name: string; description: string; category: string; icon: string };
+    habit_definitions?: { name: string; description: string; frequency: string; icon: string };
   } | null;
-  reflection: { type: string; prompt: string };
+  reflection_prompt: { type: string; prompt: string };
   challenge_item: {
     id: string;
     question_text: string;
@@ -32,17 +35,12 @@ interface MixData {
     correct_answer: string;
     explanation: string;
   } | null;
-  reflection_response?: string;
-  challenge_answer?: string;
-  challenge_correct?: boolean;
-}
-
-interface Session {
-  id: string;
-  session_date: string;
-  mix_data: MixData;
-  status: string;
-  steps_completed: string[];
+  spaced_rep_total: number;
+  spaced_rep_completed: number;
+  new_concept_completed: boolean;
+  habit_checked: boolean;
+  reflection_done: boolean;
+  challenge_done: boolean;
   xp_earned: number;
   started_at: string | null;
   completed_at: string | null;
@@ -66,6 +64,16 @@ const STEP_ICONS: Record<StepName, string> = {
   reflection: '🪞',
   challenge: '⚡',
 };
+
+function getCompletedSteps(s: Session): string[] {
+  const steps: string[] = [];
+  if (s.spaced_rep_completed > 0) steps.push('spaced_rep');
+  if (s.new_concept_completed) steps.push('concept');
+  if (s.habit_checked) steps.push('habit');
+  if (s.reflection_done) steps.push('reflection');
+  if (s.challenge_done) steps.push('challenge');
+  return steps;
+}
 
 export default function DailyMixPage() {
   const [session, setSession] = useState<Session | null>(null);
@@ -97,10 +105,10 @@ export default function DailyMixPage() {
         setSession(json.data);
         if (json.data.status === 'completed') {
           setIsFinished(true);
-        } else if (json.data.steps_completed?.length > 0) {
-          // Resume from where they left off
-          const completed = json.data.steps_completed as string[];
-          const nextIdx = STEPS.findIndex(s => !completed.includes(s));
+        } else if (json.data.status === 'in_progress') {
+          // Resume from where they left off using individual boolean fields
+          const completedSteps = getCompletedSteps(json.data);
+          const nextIdx = STEPS.findIndex(s => !completedSteps.includes(s));
           setCurrentStep(nextIdx >= 0 ? nextIdx : STEPS.length);
         }
       } else {
@@ -157,7 +165,7 @@ export default function DailyMixPage() {
 
   const handleCompleteHabit = async (completed: boolean) => {
     setHabitDone(completed);
-    const habitId = session?.mix_data?.habit_check?.habit_id;
+    const habitId = session?.habit_check?.habit_id;
     await postAction('complete_habit', { habit_id: habitId, completed });
     setCurrentStep(3);
   };
@@ -168,7 +176,7 @@ export default function DailyMixPage() {
   };
 
   const handleCompleteChallenge = async () => {
-    const correct = selectedAnswer === session?.mix_data?.challenge_item?.correct_answer;
+    const correct = selectedAnswer === session?.challenge_item?.correct_answer;
     setChallengeSubmitted(true);
     await postAction('complete_challenge', { answer: selectedAnswer, correct });
   };
@@ -194,7 +202,7 @@ export default function DailyMixPage() {
   };
 
   // Progress calculation
-  const stepsCompleted = session?.steps_completed?.length || 0;
+  const stepsCompleted = session ? getCompletedSteps(session).length : 0;
   const progressPercent = (stepsCompleted / STEPS.length) * 100;
 
   if (loading) {
@@ -283,7 +291,7 @@ export default function DailyMixPage() {
               </div>
               <div className="bg-gradient-to-br from-success-50 to-success-100 rounded-2xl p-4">
                 <p className="text-3xl font-bold text-success-600">
-                  {session.steps_completed?.length || 0}/{STEPS.length}
+                  {getCompletedSteps(session)?.length || 0}/{STEPS.length}
                 </p>
                 <p className="text-sm text-success-500">Steps Done</p>
               </div>
@@ -291,7 +299,7 @@ export default function DailyMixPage() {
 
             <div className="flex flex-wrap gap-2 justify-center mb-8">
               {STEPS.map(step => {
-                const done = session.steps_completed?.includes(step);
+                const done = getCompletedSteps(session)?.includes(step);
                 return (
                   <div
                     key={step}
@@ -321,11 +329,11 @@ export default function DailyMixPage() {
     );
   }
 
-  const mix = session?.mix_data;
-  if (!mix || !session) return null;
+  if (!session) return null;
+  const mix = session;
 
   // If not started yet, show welcome
-  if (session.status === 'pending') {
+  if (session.status === 'not_started') {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <motion.div
@@ -390,7 +398,7 @@ export default function DailyMixPage() {
           </div>
           <div className="flex justify-between mt-2">
             {STEPS.map((step, idx) => {
-              const done = session.steps_completed?.includes(step);
+              const done = getCompletedSteps(session)?.includes(step);
               const active = idx === currentStep;
               return (
                 <div
@@ -446,7 +454,7 @@ export default function DailyMixPage() {
                           {item.topics?.title || 'Topic'}
                         </p>
                         <p className="font-medium text-gray-900">
-                          {flippedCards.has(idx) ? item.answer_text : item.question_text}
+                          {flippedCards.has(idx) ? (typeof item.answer === 'string' ? item.answer : JSON.stringify(item.answer)) : item.question_text}
                         </p>
                         <p className="text-xs text-gray-400 mt-2">
                           {flippedCards.has(idx) ? 'Tap to see question' : 'Tap to reveal answer'}
@@ -657,10 +665,10 @@ export default function DailyMixPage() {
 
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 mb-6">
                 <p className="text-xs font-semibold text-purple-500 uppercase tracking-wide mb-2">
-                  {mix.reflection.type}
+                  {mix.reflection_prompt.type}
                 </p>
                 <p className="text-lg font-medium text-gray-900">
-                  {mix.reflection.prompt}
+                  {mix.reflection_prompt.prompt}
                 </p>
               </div>
 

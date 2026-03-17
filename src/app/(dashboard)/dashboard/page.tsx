@@ -151,7 +151,7 @@ export default function DashboardPage() {
           .from('classroom_enrollments') as any)
           .select('classroom_id, classrooms(id, name)')
           .eq('student_id', authUser.id)
-          .eq('status', 'active');
+          .eq('is_active', true);
 
         if (enrollments) {
           const classroomsList = enrollments
@@ -301,10 +301,10 @@ export default function DashboardPage() {
 
               <div className="space-y-3">
                 {[
-                  { key: 'visual', icon: '👁️', label: 'Visual', value: learningStyle?.visual || 55 },
-                  { key: 'kinesthetic', icon: '🖐️', label: 'Kinesthetic', value: learningStyle?.kinesthetic || 25 },
-                  { key: 'auditory', icon: '👂', label: 'Auditory', value: learningStyle?.auditory || 12 },
-                  { key: 'reading', icon: '📖', label: 'Reading', value: learningStyle?.reading || 8 },
+                  { key: 'visual', icon: '👁️', label: 'Visual', value: (learningStyle as any)?.visual_score || 55 },
+                  { key: 'kinesthetic', icon: '🖐️', label: 'Kinesthetic', value: (learningStyle as any)?.kinesthetic_score || 25 },
+                  { key: 'auditory', icon: '👂', label: 'Auditory', value: (learningStyle as any)?.auditory_score || 12 },
+                  { key: 'reading', icon: '📖', label: 'Reading', value: (learningStyle as any)?.reading_score || 8 },
                 ].map((style) => (
                   <div key={style.key} className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg ${

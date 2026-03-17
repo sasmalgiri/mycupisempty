@@ -247,7 +247,7 @@ function PedagogyContent({ subjectId }: { subjectId: string }) {
           <div className="grid grid-cols-2 gap-4">
             <StatBox label="Sessions" value={state.sessions_count} icon="📊" />
             <StatBox label="Total Time" value={`${Math.round(state.total_time_minutes)}m`} icon="⏱️" />
-            <StatBox label="Streak" value={`${state.streak_days}d`} icon="🔥" />
+            <StatBox label="Hint Rate" value={`${(state.hint_dependence_rate || 0).toFixed(0)}%`} icon="💡" />
             <StatBox label="Retrieval Strength" value={`${state.retrieval_strength.toFixed(0)}%`} icon="💪" />
             <StatBox label="Confidence Calibration" value={`${state.confidence_calibration.toFixed(0)}%`} icon="🎯" />
             <StatBox label="Scaffold Level" value={`${state.scaffold_level}/5`} icon="🏗️" />

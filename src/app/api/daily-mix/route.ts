@@ -74,16 +74,17 @@ export async function GET(request: NextRequest) {
         id,
         topic_id,
         question_text,
-        answer_text,
-        difficulty,
-        next_review_date,
+        answer,
+        item_type,
+        next_review_at,
         interval_days,
         ease_factor,
         topics ( title )
       `)
       .eq('user_id', user.id)
-      .lte('next_review_date', today)
-      .order('next_review_date', { ascending: true })
+      .eq('is_active', true)
+      .lte('next_review_at', new Date().toISOString())
+      .order('next_review_at', { ascending: true })
       .limit(5);
 
     // 2. New concept — next uncompleted topic
@@ -107,12 +108,11 @@ export async function GET(request: NextRequest) {
       .from('student_habits')
       .select(`
         id,
-        habit_name,
-        description,
-        frequency,
+        habit_id,
         is_active,
         current_streak,
-        longest_streak
+        longest_streak,
+        habit_definitions ( name, description, frequency, icon )
       `)
       .eq('user_id', user.id)
       .eq('is_active', true);
@@ -235,8 +235,9 @@ export async function POST(request: NextRequest) {
                 .update({
                   interval_days: newInterval,
                   ease_factor: newEase,
-                  next_review_date: nextReview.toISOString().split('T')[0],
+                  next_review_at: nextReview.toISOString(),
                   last_reviewed_at: new Date().toISOString(),
+                  last_quality: quality,
                 })
                 .eq('id', item_id);
             }
@@ -255,12 +256,13 @@ export async function POST(request: NextRequest) {
         // Record habit completion if provided
         if (actionData?.habit_id && actionData?.completed !== undefined) {
           await supabase
-            .from('habit_logs')
+            .from('habit_tracking')
             .insert({
               user_id: user.id,
               habit_id: actionData.habit_id,
+              date: getTodayDateString(),
               completed: actionData.completed,
-              logged_at: new Date().toISOString(),
+              notes: actionData.notes || null,
             });
         }
         updates = { habit_checked: true };

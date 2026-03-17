@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     // Fetch all active habits for the user
     const { data: habits, error } = await supabase
       .from('student_habits')
-      .select('id, habit_name, current_streak, streak_freezes_available, streak_freezes_used, last_freeze_date')
+      .select('id, current_streak, streak_freezes_available, streak_freezes_used, last_freeze_date, habit_definitions(name)')
       .eq('user_id', user.id)
       .eq('is_active', true);
 
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     const habitData = (habits || []).map((h: any) => ({
       habit_id: h.id,
-      name: h.habit_name,
+      name: h.habit_definitions?.name || 'Habit',
       current_streak: h.current_streak || 0,
       freezes_available: h.streak_freezes_available || 0,
       freezes_used: h.streak_freezes_used || 0,
@@ -150,7 +150,6 @@ async function handleUseFreeze(supabase: any, userId: string, habit: any) {
       streak_freezes_available: freezesAvailable - 1,
       streak_freezes_used: (habit.streak_freezes_used || 0) + 1,
       last_freeze_date: today,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', habit.id);
 
@@ -209,7 +208,6 @@ async function handleEarnFreeze(supabase: any, userId: string, habit: any) {
     .from('student_habits')
     .update({
       streak_freezes_available: newFreezes,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', habit.id);
 

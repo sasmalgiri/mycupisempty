@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     // Get user profile for class level
     const { data: profile } = await supabase
       .from('profiles')
-      .select('class_level')
+      .select('current_class')
       .eq('id', user.id)
       .single();
 
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     // Get AI response
     const reply = await getGuruExplanation(
       {
-        classLevel: profile?.class_level || 8,
+        classLevel: profile?.current_class || 8,
         subject: subjectName,
         topic: topicName,
         learningStyle: (learningStyle?.primary_style as VARKStyle) || 'visual',
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     let checkpoint = null;
     if (previousMessages.length > 0 && previousMessages.length % 4 === 0) {
       try {
-        const check = await assessUnderstanding(topicName, reply, profile?.class_level || 8);
+        const check = await assessUnderstanding(topicName, reply, profile?.current_class || 8);
         checkpoint = {
           question: check.question,
           expected_concepts: check.expected_concepts,

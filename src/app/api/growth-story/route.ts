@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
       .from('outcome_snapshots')
       .select('*')
       .eq('user_id', user.id)
-      .lte('snapshot_date', period_start)
-      .order('snapshot_date', { ascending: false })
+      .lte('created_at', period_start)
+      .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
       .from('outcome_snapshots')
       .select('*')
       .eq('user_id', user.id)
-      .lte('snapshot_date', period_end)
-      .order('snapshot_date', { ascending: false })
+      .lte('created_at', period_end)
+      .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     // 3. Habit stats from student_habits
     const { data: studentHabits } = await supabase
       .from('student_habits')
-      .select('id, user_id, habit_name, current_streak, is_active')
+      .select('id, user_id, current_streak, is_active, habit_definitions(name)')
       .eq('user_id', user.id)
       .eq('is_active', true);
 
@@ -117,13 +117,13 @@ export async function POST(request: NextRequest) {
     // 6. Profile info for the student's name
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name, display_name, class_level')
+      .select('full_name, current_class')
       .eq('id', user.id)
       .single();
 
     // --- Compile context ---
-    const studentName = profile?.display_name || profile?.full_name || 'Student';
-    const classLevel = profile?.class_level || '';
+    const studentName = profile?.full_name || 'Student';
+    const classLevel = profile?.current_class || '';
 
     const activeHabits = studentHabits || [];
     const totalHabitCompletions = activeHabits.length;

@@ -135,8 +135,7 @@ async function handleLink(supabase: any, userId: string, body: any) {
       channel: 'telegram',
       channel_id: telegram_chat_id,
       is_active: true,
-      notification_types: '["daily_reminder", "streak_warning", "concern_flag", "weekly_digest"]',
-      created_at: new Date().toISOString(),
+      notification_types: ["daily_reminder", "streak_warning", "concern_flag", "weekly_digest"],
     },
     { onConflict: 'user_id,channel' }
   );
@@ -260,7 +259,7 @@ async function handleSendReminder(supabase: any, userId: string) {
   // Fetch streak and pending habits
   const { data: stats } = await supabase
     .from('user_stats')
-    .select('streak_days')
+    .select('current_streak')
     .eq('user_id', userId)
     .single();
 
@@ -272,7 +271,7 @@ async function handleSendReminder(supabase: any, userId: string) {
 
   const message = formatDailyReminder(
     profile?.full_name || 'Student',
-    stats?.streak_days || 0,
+    stats?.current_streak || 0,
     activeHabits || 0
   );
 
@@ -312,7 +311,7 @@ async function handleSendDigest(supabase: any, userId: string) {
 
   const { data: stats } = await supabase
     .from('user_stats')
-    .select('total_xp, level, streak_days')
+    .select('total_xp, level, current_streak')
     .eq('user_id', userId)
     .single();
 
@@ -336,7 +335,7 @@ async function handleSendDigest(supabase: any, userId: string) {
     totalXP: stats?.total_xp || 0,
     xpGained,
     level: stats?.level || 1,
-    streakDays: stats?.streak_days || 0,
+    streakDays: stats?.current_streak || 0,
     habitsCompleted: 0,
     totalHabits: 0,
     topSubject: '',

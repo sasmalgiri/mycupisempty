@@ -20,13 +20,9 @@ function getSupabaseClient() {
 interface UserProfile {
   id: string;
   full_name: string;
-  email: string;
-  class_level: number;
+  current_class: number;
   role: 'student' | 'parent' | 'teacher';
   avatar_url?: string;
-  xp_points: number;
-  level: number;
-  streak_days: number;
   preferred_language: string;
   created_at: string;
 }
@@ -83,7 +79,7 @@ export function useAuth() {
     const supabase = getSupabaseClient();
     
     const { data, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
@@ -117,7 +113,7 @@ export function useAuth() {
       email,
       password,
       options: {
-        data: { full_name: fullName, class_level: classLevel },
+        data: { full_name: fullName, current_class: classLevel },
       },
     });
     
@@ -140,7 +136,7 @@ export function useAuth() {
     
     const supabase = getSupabaseClient();
     const { error } = await supabase
-      .from('users')
+      .from('profiles')
       .update(updates)
       .eq('id', state.user.id);
 
@@ -348,7 +344,7 @@ export function useLearningStyle() {
         auditory_score: scores.auditory,
         reading_score: scores.reading,
         kinesthetic_score: scores.kinesthetic,
-        updated_at: new Date().toISOString(),
+        assessment_date: new Date().toISOString(),
       });
 
     if (!error) {
