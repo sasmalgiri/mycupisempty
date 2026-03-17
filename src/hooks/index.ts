@@ -285,6 +285,13 @@ export function useLearningStyle() {
         return;
       }
 
+      // Fetch MI data from the correct table
+      const { data: miData } = await (supabase as any)
+        .from('multiple_intelligences')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
       if (data) {
         const dominant = getDominantStyle({
           visual: data.visual_score,
@@ -300,14 +307,14 @@ export function useLearningStyle() {
           kinesthetic: data.kinesthetic_score,
           dominant,
           multipleIntelligences: {
-            linguistic: data.linguistic || 0,
-            logical: data.logical || 0,
-            spatial: data.spatial || 0,
-            musical: data.musical || 0,
-            bodily: data.bodily || 0,
-            interpersonal: data.interpersonal || 0,
-            intrapersonal: data.intrapersonal || 0,
-            naturalistic: data.naturalistic || 0,
+            linguistic: miData?.linguistic || 0,
+            logical: miData?.logical_mathematical || 0,
+            spatial: miData?.spatial || 0,
+            musical: miData?.musical || 0,
+            bodily: miData?.bodily_kinesthetic || 0,
+            interpersonal: miData?.interpersonal || 0,
+            intrapersonal: miData?.intrapersonal || 0,
+            naturalistic: miData?.naturalistic || 0,
           },
         });
         setHasAssessment(true);
