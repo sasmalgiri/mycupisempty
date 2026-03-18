@@ -196,6 +196,7 @@ export default function SignupPage() {
                 onChange={handleChange}
                 placeholder="••••••••"
                 className="input-field"
+                autoComplete="new-password"
                 required
                 minLength={6}
               />
@@ -212,6 +213,7 @@ export default function SignupPage() {
                 onChange={handleChange}
                 placeholder="••••••••"
                 className="input-field"
+                autoComplete="new-password"
                 required
               />
             </div>
