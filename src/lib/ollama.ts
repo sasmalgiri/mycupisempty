@@ -1,8 +1,9 @@
-import type { OllamaRequest, OllamaResponse, VARKStyle, BloomLevel } from '@/types';
+import type { VARKStyle, BloomLevel } from '@/types';
 
-// Ollama server configuration (hosted on Oracle Cloud)
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
+// Grok (xAI) API configuration — OpenAI-compatible
+const XAI_API_KEY = process.env.XAI_API_KEY || '';
+const XAI_BASE_URL = process.env.XAI_BASE_URL || 'https://api.x.ai/v1';
+const XAI_MODEL = process.env.XAI_MODEL || 'grok-3-mini';
 
 interface AITutorContext {
   learningStyle: VARKStyle;
@@ -24,11 +25,8 @@ interface GenerateQuestionOptions {
 // Learning style specific prompts
 const LEARNING_STYLE_PROMPTS: Record<VARKStyle, string> = {
   visual: `Use diagrams, charts, flowcharts, and visual metaphors. Describe things in terms of colors, shapes, and spatial relationships. Use bullet points and organize information visually. Create mental images and visual analogies.`,
-  
   auditory: `Explain as if you're speaking to the student. Use a conversational, rhythmic tone. Include mnemonics, rhymes, and patterns. Encourage the student to say things out loud. Use verbal associations and sound-based memory techniques.`,
-  
   reading: `Provide detailed written explanations with clear structure. Use headings, definitions, and references. Include comprehensive text-based content. Emphasize reading and note-taking. Use precise vocabulary and formal language.`,
-  
   kinesthetic: `Focus on hands-on activities and real-world applications. Include experiments, simulations, and practical examples. Encourage learning by doing. Use physical analogies and movement-based concepts. Connect concepts to tangible experiences.`,
 };
 
@@ -43,78 +41,60 @@ const BLOOM_LEVEL_PROMPTS: Record<BloomLevel, string> = {
 };
 
 /**
- * Send a request to Ollama API
+ * Call Grok (xAI) chat completions API
  */
-async function ollamaGenerate(prompt: string, options?: Partial<OllamaRequest>): Promise<string> {
-  try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt,
-        stream: false,
-        options: {
-          temperature: 0.7,
-          top_p: 0.9,
-          num_predict: 1024,
-          ...options?.options,
-        },
-        ...options,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data: OllamaResponse = await response.json();
-    return data.response;
-  } catch (error) {
-    console.error('Ollama API Error:', error);
-    throw error;
+async function xaiChatCompletion(
+  messages: Array<{ role: string; content: string }>,
+  options?: { temperature?: number; max_tokens?: number }
+): Promise<string> {
+  if (!XAI_API_KEY) {
+    throw new Error('XAI_API_KEY is not configured');
   }
+
+  const response = await fetch(`${XAI_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${XAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: XAI_MODEL,
+      messages,
+      temperature: options?.temperature ?? 0.7,
+      max_tokens: options?.max_tokens ?? 1024,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => '');
+    throw new Error(`xAI API error: ${response.status} ${errText}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
 }
 
 /**
- * Chat with the AI tutor using conversation history
+ * Simple generate (prompt → response) using chat completions
  */
-async function ollamaChat(
+async function aiGenerate(prompt: string, options?: { temperature?: number; max_tokens?: number }): Promise<string> {
+  return xaiChatCompletion(
+    [{ role: 'user', content: prompt }],
+    options,
+  );
+}
+
+/**
+ * Chat with conversation history
+ */
+async function aiChat(
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
   systemPrompt: string
 ): Promise<string> {
-  try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messages,
-        ],
-        stream: false,
-        options: {
-          temperature: 0.7,
-          top_p: 0.9,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Ollama Chat API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.message?.content || data.response;
-  } catch (error) {
-    console.error('Ollama Chat API Error:', error);
-    throw error;
-  }
+  return xaiChatCompletion([
+    { role: 'system', content: systemPrompt },
+    ...messages,
+  ]);
 }
 
 /**
@@ -124,7 +104,7 @@ export async function getAIExplanation(
   context: AITutorContext,
   userQuestion: string
 ): Promise<string> {
-  const systemPrompt = `You are an expert NCERT tutor for Class ${context.classLevel} ${context.subject}. 
+  const systemPrompt = `You are an expert NCERT tutor for Class ${context.classLevel} ${context.subject}.
 You are currently teaching the topic: "${context.topic}".
 
 LEARNING STYLE ADAPTATION:
@@ -141,10 +121,10 @@ GUIDELINES:
 
 Respond in a way that's engaging and easy to understand for a ${context.classLevel}th grade student.`;
 
-  const messages = context.previousMessages || [];
+  const messages = [...(context.previousMessages || [])];
   messages.push({ role: 'user', content: userQuestion });
 
-  return await ollamaChat(messages, systemPrompt);
+  return await aiChat(messages, systemPrompt);
 }
 
 /**
@@ -183,16 +163,11 @@ Format your response as JSON:
 
 Only output valid JSON, no additional text.`;
 
-  const response = await ollamaGenerate(prompt, {
-    options: { temperature: 0.8 },
-  });
+  const response = await aiGenerate(prompt, { temperature: 0.8 });
 
   try {
-    // Extract JSON from response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No valid JSON found in response');
-    }
+    if (!jsonMatch) throw new Error('No valid JSON found in response');
     return JSON.parse(jsonMatch[0]);
   } catch (error) {
     console.error('Failed to parse question JSON:', error);
@@ -210,7 +185,7 @@ export async function generateHint(
   hintNumber: number
 ): Promise<string> {
   const hintLevel = hintNumber === 1 ? 'subtle' : hintNumber === 2 ? 'moderate' : 'direct';
-  
+
   const prompt = `Generate a ${hintLevel} hint for the following question.
 
 Question: ${question}
@@ -224,9 +199,7 @@ ${hintLevel === 'direct' ? '- Provide a strong hint that almost gives away the a
 
 Provide only the hint text, no additional formatting.`;
 
-  return await ollamaGenerate(prompt, {
-    options: { temperature: 0.6, num_predict: 100 },
-  });
+  return await aiGenerate(prompt, { temperature: 0.6, max_tokens: 150 });
 }
 
 /**
@@ -239,7 +212,7 @@ export async function explainWrongAnswer(
   topic: string,
   learningStyle: VARKStyle
 ): Promise<string> {
-  const prompt = `A Class student got this question wrong. Help them understand their mistake.
+  const prompt = `A student got this question wrong. Help them understand their mistake.
 
 Question: ${question}
 Student's Answer: ${userAnswer}
@@ -257,7 +230,7 @@ Provide a supportive explanation that:
 
 Keep it encouraging and helpful!`;
 
-  return await ollamaGenerate(prompt);
+  return await aiGenerate(prompt);
 }
 
 /**
@@ -282,16 +255,17 @@ Include:
 
 Keep it suitable for a ${classLevel}th grade student.`;
 
-  return await ollamaGenerate(prompt);
+  return await aiGenerate(prompt);
 }
 
 /**
- * Check if Ollama server is available
+ * Check if AI service is available
  */
 export async function checkOllamaHealth(): Promise<boolean> {
+  if (!XAI_API_KEY) return false;
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`, {
-      method: 'GET',
+    const response = await fetch(`${XAI_BASE_URL}/models`, {
+      headers: { 'Authorization': `Bearer ${XAI_API_KEY}` },
     });
     return response.ok;
   } catch {
@@ -300,24 +274,26 @@ export async function checkOllamaHealth(): Promise<boolean> {
 }
 
 /**
- * Get available models from Ollama
+ * Get available models
  */
 export async function getAvailableModels(): Promise<string[]> {
+  if (!XAI_API_KEY) return [];
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
+    const response = await fetch(`${XAI_BASE_URL}/models`, {
+      headers: { 'Authorization': `Bearer ${XAI_API_KEY}` },
+    });
     if (!response.ok) return [];
-    
     const data = await response.json();
-    return data.models?.map((m: { name: string }) => m.name) || [];
+    return data.data?.map((m: { id: string }) => m.id) || [];
   } catch {
     return [];
   }
 }
 
-// Export all functions
+// Export all functions (keep same export shape for compatibility)
 export const ollamaAI = {
-  generate: ollamaGenerate,
-  chat: ollamaChat,
+  generate: aiGenerate,
+  chat: aiChat,
   getExplanation: getAIExplanation,
   generateQuestion,
   generateHint,

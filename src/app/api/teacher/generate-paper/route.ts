@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
+// Grok (xAI) API configuration
+const XAI_API_KEY = process.env.XAI_API_KEY || '';
+const XAI_BASE_URL = process.env.XAI_BASE_URL || 'https://api.x.ai/v1';
+const XAI_MODEL = process.env.XAI_MODEL || 'grok-3-mini';
 
 interface QuestionCriteria {
   subject_id: string;
@@ -59,21 +61,26 @@ Return ONLY a JSON array where each object has:
 
 Return ONLY the JSON array, no other text.`;
 
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    if (!XAI_API_KEY) return [];
+
+    const response = await fetch(`${XAI_BASE_URL}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${XAI_API_KEY}`,
+      },
       body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt,
-        stream: false,
-        options: { temperature: 0.7 },
+        model: XAI_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 2048,
       }),
     });
 
     if (!response.ok) return [];
 
     const data = await response.json();
-    const text = data.response || '';
+    const text = data.choices?.[0]?.message?.content || '';
 
     // Extract JSON array from response
     const jsonMatch = text.match(/\[[\s\S]*\]/);

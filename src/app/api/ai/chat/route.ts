@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('AI Chat Error:', error);
     
-    // Fallback response if Ollama is unavailable
-    if (error.message?.includes('fetch') || error.message?.includes('connect')) {
+    // Fallback response if AI service is unavailable
+    if (error.message?.includes('fetch') || error.message?.includes('connect') || error.message?.includes('XAI_API_KEY')) {
       return NextResponse.json({
         success: true,
         response: `I apologize, but I'm having trouble connecting to my brain right now. 🧠
@@ -129,7 +129,7 @@ export async function GET() {
     return NextResponse.json({
       status: isHealthy ? 'healthy' : 'unhealthy',
       models,
-      ollamaUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+      provider: 'xai-grok',
     });
   } catch (error: any) {
     return NextResponse.json({

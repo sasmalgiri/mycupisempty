@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
+// Grok (xAI) API configuration
+const XAI_API_KEY = process.env.XAI_API_KEY || '';
+const XAI_BASE_URL = process.env.XAI_BASE_URL || 'https://api.x.ai/v1';
+const XAI_MODEL = process.env.XAI_MODEL || 'grok-3-mini';
 
 // ============================================================================
 // GET: Fetch existing growth stories for the user
@@ -241,38 +243,46 @@ INSTRUCTIONS:
 
 Write the growth story now:`;
 
-    // --- Call Ollama to generate the story ---
+    // --- Call xAI (Grok) to generate the story ---
     let narrative = '';
     let highlights: string[] = [];
 
     try {
-      const ollamaResponse = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+      if (!XAI_API_KEY) {
+        throw new Error('XAI_API_KEY is not configured');
+      }
+
+      const aiResponse = await fetch(`${XAI_BASE_URL}/chat/completions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${XAI_API_KEY}`,
+        },
         body: JSON.stringify({
-          model: OLLAMA_MODEL,
-          prompt,
-          stream: false,
-          options: { temperature: 0.8, top_p: 0.9, num_predict: 1024 },
+          model: XAI_MODEL,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.8,
+          max_tokens: 1024,
         }),
       });
 
-      if (!ollamaResponse.ok) {
-        throw new Error(`Ollama API error: ${ollamaResponse.status}`);
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text().catch(() => '');
+        throw new Error(`xAI API error: ${aiResponse.status} ${errText}`);
       }
 
-      const ollamaData = await ollamaResponse.json();
-      narrative = ollamaData.response || '';
+      const aiData = await aiResponse.json();
+      narrative = aiData.choices?.[0]?.message?.content || '';
 
       // Try to extract highlights from the narrative
       const bulletMatches = narrative.match(/[-*]\s+(.+)/g);
       if (bulletMatches) {
         highlights = bulletMatches.slice(0, 5).map((b: string) => b.replace(/^[-*]\s+/, '').trim());
       }
-    } catch (ollamaError) {
-      console.error('Ollama generation error, using fallback:', ollamaError);
+    } catch (aiError) {
+      console.error('AI generation error, using fallback:', aiError);
 
-      // Fallback narrative when Ollama is unavailable
+      // Fallback narrative when AI service is unavailable
       narrative = buildFallbackNarrative(
         studentName, period_start, period_end, resolvedStoryType,
         totalTopics, topicsMastered, avgMastery,
@@ -353,7 +363,7 @@ Write the growth story now:`;
 }
 
 // ============================================================================
-// Fallback narrative builder (when Ollama is unavailable)
+// Fallback narrative builder (when AI service is unavailable)
 // ============================================================================
 
 function buildFallbackNarrative(
