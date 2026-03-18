@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     if (criteria.chapter_ids.length > 0) {
       const { data: topics } = await supabase
         .from('topics')
-        .select('id, name')
+        .select('id, title')
         .in('chapter_id', criteria.chapter_ids);
       topicIds = (topics || []).map((t: any) => t.id);
     }
@@ -194,10 +194,10 @@ export async function POST(request: NextRequest) {
 
       const { data: topicNames } = await supabase
         .from('topics')
-        .select('name')
+        .select('title')
         .in('id', topicIds.length > 0 ? topicIds : ['']);
 
-      const topicList = (topicNames || []).map((t: any) => t.name);
+      const topicList = (topicNames || []).map((t: any) => t.title);
 
       const aiQuestions = await generateQuestionsWithAI(estimatedCount, criteria, topicList);
 
