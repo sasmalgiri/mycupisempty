@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createBrowserClient as createSSRBrowserClient, createServerClient as createSSRServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/database';
 
 // Environment variables
@@ -6,17 +7,12 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-// Client-side Supabase client (for use in Client Components)
+// Client-side Supabase client (uses @supabase/ssr so cookies sync with middleware)
 let browserClient: SupabaseClient<Database> | null = null;
 
 export const createBrowserClient = (): SupabaseClient<Database> => {
   if (!browserClient) {
-    browserClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-    });
+    browserClient = createSSRBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
   }
   return browserClient;
 };
@@ -26,14 +22,16 @@ export const createServerClient = async (): Promise<SupabaseClient<Database>> =>
   const { cookies } = await import('next/headers');
   const cookieStore = await cookies();
 
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-    global: {
-      headers: {
-        cookie: cookieStore.toString(),
+  return createSSRServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set(name: string, value: string, options: any) {
+        try { cookieStore.set({ name, value, ...options }); } catch {}
+      },
+      remove(name: string, options: any) {
+        try { cookieStore.set({ name, value: '', ...options }); } catch {}
       },
     },
   });
