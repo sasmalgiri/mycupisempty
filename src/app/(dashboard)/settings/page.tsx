@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { createBrowserClient } from '@/lib/supabase';
 
 interface UserSettings {
   name: string;
@@ -24,10 +25,10 @@ interface UserSettings {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings>({
-    name: 'Priya Sharma',
-    email: 'priya@example.com',
-    classNumber: 6,
-    learningStyle: { visual: 55, auditory: 12, reading: 8, kinesthetic: 25 },
+    name: '',
+    email: '',
+    classNumber: 0,
+    learningStyle: { visual: 0, auditory: 0, reading: 0, kinesthetic: 0 },
     preferences: {
       dailyGoal: 30,
       notifications: true,
@@ -39,11 +40,57 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'learning' | 'preferences'>('profile');
 
+  useEffect(() => {
+    const loadSettings = async () => {
+      const supabase = createBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, class_level')
+        .eq('id', user.id)
+        .single() as any;
+
+      const { data: style } = await supabase
+        .from('learning_styles')
+        .select('visual_score, auditory_score, reading_score, kinesthetic_score')
+        .eq('user_id', user.id)
+        .single() as any;
+
+      setSettings(prev => ({
+        ...prev,
+        name: profile?.full_name || user.user_metadata?.full_name || '',
+        email: user.email || '',
+        classNumber: profile?.class_level || 0,
+        learningStyle: {
+          visual: style?.visual_score || 0,
+          auditory: style?.auditory_score || 0,
+          reading: style?.reading_score || 0,
+          kinesthetic: style?.kinesthetic_score || 0,
+        },
+      }));
+    };
+    loadSettings();
+  }, []);
+
   const handleSave = async () => {
     setSaving(true);
-    // In production, save to Supabase
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
+    try {
+      const supabase = createBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await (supabase as any)
+        .from('profiles')
+        .update({
+          full_name: settings.name,
+          class_level: settings.classNumber,
+        })
+        .eq('id', user.id);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

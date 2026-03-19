@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { createBrowserClient } from '@/lib/supabase';
 import UnstuckButton from '@/components/UnstuckButton';
 
 const navItems = [
@@ -37,13 +38,50 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userProfile, setUserProfile] = useState({
-    name: 'Priya Sharma',
-    class: 6,
-    xp: 2450,
-    streak: 7
+    name: '',
+    class: 0,
+    xp: 0,
+    streak: 0,
   });
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const supabase = createBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, class_level')
+        .eq('id', user.id)
+        .single() as any;
+
+      // Fetch stats
+      const { data: stats } = await supabase
+        .from('user_stats')
+        .select('total_xp, current_streak')
+        .eq('user_id', user.id)
+        .single() as any;
+
+      setUserProfile({
+        name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Student',
+        class: profile?.class_level || 0,
+        xp: stats?.total_xp || 0,
+        streak: stats?.current_streak || 0,
+      });
+    };
+    loadProfile();
+  }, []);
+
+  const handleLogout = async () => {
+    const supabase = createBrowserClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-primary-50 to-secondary-50">
@@ -130,7 +168,7 @@ export default function DashboardLayout({
             <span className="text-xl">⚙️</span>
             <span>Settings</span>
           </Link>
-          <button type="button" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all">
+          <button type="button" onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all">
             <span className="text-xl" aria-hidden="true">🚪</span>
             <span>Logout</span>
           </button>
