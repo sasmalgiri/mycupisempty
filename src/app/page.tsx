@@ -17,6 +17,9 @@ export default function HomePage() {
               <Link href="/subjects" className="text-gray-600 hover:text-gray-900 font-medium">
                 Subjects
               </Link>
+              <Link href="/blog" className="text-gray-600 hover:text-gray-900 font-medium">
+                Blog
+              </Link>
               <Link href="/about" className="text-gray-600 hover:text-gray-900 font-medium">
                 About
               </Link>
