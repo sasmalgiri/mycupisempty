@@ -3,6 +3,8 @@ import { Nunito, Crimson_Pro, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
 import BuddyAssistant from '@/components/BuddyAssistant';
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://mycupisempty.com';
+
 const nunito = Nunito({
   subsets: ['latin'],
   variable: '--font-nunito',
@@ -22,16 +24,90 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'MyCupIsEmpty - AI-Powered Adaptive Learning Platform',
-  description: 'Personalized education using 20+ ancient & modern learning methods. AI Guru, interactive games, character building. Every student can learn - in their own way.',
-  keywords: ['NCERT', 'CBSE', 'ICSE', 'education', 'learning', 'AI tutor', 'adaptive learning', 'Vedic Math', 'Gurukul', 'Class 1-12', 'games', 'puzzles'],
-  authors: [{ name: 'MyCupIsEmpty' }],
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: 'MyCupIsEmpty - AI-Powered Adaptive Learning Platform for Indian Students',
+    template: '%s | MyCupIsEmpty',
+  },
+  description: 'Personalized NCERT education for Class 1-12 using 20+ teaching methods (Feynman, Gurukul, Vedic Math, Socratic). AI Guru adapts to your VARK learning style. Free for students.',
+  keywords: ['NCERT learning app', 'CBSE online tutor', 'ICSE study platform', 'AI tutor India', 'adaptive learning', 'Vedic Math', 'Gurukul method', 'VARK learning style', 'Class 1-12 education', 'personalized learning', 'free education app India', 'Feynman technique', 'spaced repetition', 'interactive learning games'],
+  authors: [{ name: 'MyCupIsEmpty', url: BASE_URL }],
+  creator: 'MyCupIsEmpty',
+  publisher: 'MyCupIsEmpty',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   openGraph: {
-    title: 'MyCupIsEmpty - AI-Powered Adaptive Learning',
-    description: 'Learn NCERT curriculum with AI-powered personalization based on your unique learning style.',
+    title: 'MyCupIsEmpty - AI-Powered Adaptive Learning for Indian Students',
+    description: 'Learn NCERT curriculum with AI that adapts to YOUR learning style. 20+ teaching methods. Free for Class 1-12 students.',
+    url: BASE_URL,
+    siteName: 'MyCupIsEmpty',
     type: 'website',
     locale: 'en_IN',
+    images: [
+      {
+        url: '/assets/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'MyCupIsEmpty - AI-Powered Adaptive Learning Platform',
+      },
+    ],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MyCupIsEmpty - AI-Powered Adaptive Learning',
+    description: 'Personalized NCERT education for Class 1-12. AI Guru with 20+ teaching methods adapts to your learning style.',
+    images: ['/assets/og-image.png'],
+  },
+  alternates: {
+    canonical: BASE_URL,
+  },
+  category: 'education',
+};
+
+// JSON-LD structured data for Google
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'MyCupIsEmpty',
+  description: 'AI-powered adaptive learning platform for Indian students. NCERT curriculum with 20+ teaching methods personalized to each student\'s learning style.',
+  url: BASE_URL,
+  applicationCategory: 'EducationalApplication',
+  operatingSystem: 'Web',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'INR',
+  },
+  audience: {
+    '@type': 'EducationalAudience',
+    educationalRole: 'student',
+    suggestedMinAge: 6,
+    suggestedMaxAge: 18,
+  },
+  educationalAlignment: {
+    '@type': 'AlignmentObject',
+    alignmentType: 'educationalFramework',
+    educationalFramework: 'NCERT/CBSE',
+    targetName: 'Class 1-12 Curriculum',
+  },
+  featureList: [
+    'AI-powered personalized tutoring',
+    'VARK learning style assessment',
+    '20+ teaching methods (Feynman, Gurukul, Socratic, Vedic Math)',
+    'Spaced repetition flashcards',
+    'Interactive learning games',
+    'Character and habit building',
+    'Teacher dashboard and analytics',
+  ],
 };
 
 export default function RootLayout({
@@ -41,6 +117,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${nunito.variable} ${crimsonPro.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="font-sans antialiased">
         {children}
         <BuddyAssistant />
