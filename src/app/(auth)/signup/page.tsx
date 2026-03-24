@@ -62,6 +62,15 @@ export default function SignupPage() {
       if (error) throw error;
 
       if (data.user) {
+        // Update profile with class_level and role (trigger only sets name/email)
+        await (supabase as any)
+          .from('profiles')
+          .update({
+            class_level: parseInt(formData.currentClass),
+            role: formData.role,
+          })
+          .eq('id', data.user.id);
+
         // Redirect to assessment page
         router.push('/assessment');
       }
