@@ -3,6 +3,23 @@ import { createServerClient } from '@/lib/supabase';
 import { getGuruExplanation, assessUnderstanding } from '@/lib/ollama-guru';
 import type { VARKStyle } from '@/types';
 
+// Server-side content filter — blocks obviously non-educational queries
+const BLOCKED_PATTERNS = [
+  /\b(porn|sex|nude|xxx|nsfw|hentai|onlyfans)\b/i,
+  /\b(kill|murder|suicide|self.?harm|how\s+to\s+die)\b/i,
+  /\b(bomb|explosive|weapon|gun|how\s+to\s+make\s+a)\b/i,
+  /\b(hack|crack|exploit|ddos|phish|malware|ransomware)\b/i,
+  /\b(drug|weed|cocaine|meth|heroin|mdma|lsd)\b/i,
+  /\b(gambling|betting|casino|crypto\s+trading)\b/i,
+  /\b(cheat\s+in\s+exam|leak\s+paper|answer\s+key\s+leak)\b/i,
+];
+
+function isBlockedContent(message: string): boolean {
+  return BLOCKED_PATTERNS.some(pattern => pattern.test(message));
+}
+
+const BLOCKED_RESPONSE = "I'm your study buddy and I can only help with school subjects and learning! 📚 Let's focus on your studies. What topic would you like to learn about?";
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient() as any;
@@ -25,6 +42,16 @@ export async function POST(request: NextRequest) {
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+
+    // Server-side content filter — block non-educational queries before they reach AI
+    if (isBlockedContent(message)) {
+      return NextResponse.json({
+        success: true,
+        reply: BLOCKED_RESPONSE,
+        session_id: session_id || null,
+        checkpoint: null,
+      });
     }
 
     // Get user's learning style

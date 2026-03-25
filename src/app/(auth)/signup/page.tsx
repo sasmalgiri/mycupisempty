@@ -15,15 +15,21 @@ export default function SignupPage() {
     currentClass: '6',
     role: 'student',
     board: 'cbse',
+    parentEmail: '',
+    parentConsent: false,
   });
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // All Class 1-12 students are minors (ages 6-18) under DPDPA 2023
+  const isMinor = formData.role === 'student';
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     });
   };
 
@@ -44,6 +50,25 @@ export default function SignupPage() {
       return;
     }
 
+    // DPDPA 2023 compliance: require parental consent for minor students
+    if (isMinor && !formData.parentConsent) {
+      setError('Parental/guardian consent is required for students under 18 as per DPDPA 2023');
+      setLoading(false);
+      return;
+    }
+
+    if (isMinor && !formData.parentEmail) {
+      setError('Parent/guardian email is required for students under 18');
+      setLoading(false);
+      return;
+    }
+
+    if (isMinor && formData.parentEmail === formData.email) {
+      setError('Parent/guardian email must be different from student email');
+      setLoading(false);
+      return;
+    }
+
     try {
       const supabase = createBrowserClient();
       
@@ -56,6 +81,9 @@ export default function SignupPage() {
             full_name: formData.fullName,
             current_class: parseInt(formData.currentClass),
             role: formData.role,
+            parent_email: isMinor ? formData.parentEmail : undefined,
+            parent_consent_given: isMinor ? true : undefined,
+            parent_consent_date: isMinor ? new Date().toISOString() : undefined,
           },
         },
       });
@@ -221,6 +249,59 @@ export default function SignupPage() {
                 <option value="nios">NIOS</option>
               </select>
             </div>
+
+            {/* Parental Consent Section — DPDPA 2023 compliance */}
+            {isMinor && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-amber-500 text-lg mt-0.5" aria-hidden="true">&#9888;</span>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">Parental Consent Required</p>
+                    <p className="text-xs text-amber-600 mt-1">
+                      As per India&apos;s Digital Personal Data Protection Act (DPDPA) 2023,
+                      verifiable parental consent is required for users under 18 years of age.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="parentEmail" className="block text-sm font-medium text-gray-700 mb-2">
+                    Parent/Guardian Email
+                  </label>
+                  <input
+                    type="email"
+                    id="parentEmail"
+                    name="parentEmail"
+                    value={formData.parentEmail}
+                    onChange={handleChange}
+                    placeholder="parent@example.com"
+                    className="input-field"
+                    autoComplete="email"
+                    required={isMinor}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    A consent verification email will be sent to this address.
+                  </p>
+                </div>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="parentConsent"
+                    checked={formData.parentConsent}
+                    onChange={handleChange}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    required={isMinor}
+                  />
+                  <span className="text-sm text-gray-700">
+                    I am the parent/legal guardian of this student and I consent to the collection
+                    and processing of my child&apos;s personal data for educational purposes as described
+                    in the <Link href="/privacy" className="text-primary-600 hover:underline">Privacy Policy</Link>.
+                    I understand that AI-generated content will be used for teaching and may occasionally contain errors.
+                  </span>
+                </label>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
