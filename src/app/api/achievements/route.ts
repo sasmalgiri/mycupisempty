@@ -1,68 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@/lib/supabase';
+
+// Achievement definitions (static catalog)
+const ACHIEVEMENT_DEFS = [
+  { id: '1', title: 'First Steps', description: 'Complete your first lesson', icon: '👣', category: 'learning', xpReward: 50, rarity: 'common', check: (s: any) => (s.total_questions_answered || 0) >= 1 },
+  { id: '2', title: 'Knowledge Seeker', description: 'Answer 10 questions', icon: '🔍', category: 'learning', xpReward: 100, rarity: 'common', check: (s: any) => (s.total_questions_answered || 0) >= 10 },
+  { id: '3', title: 'Scholar', description: 'Answer 50 questions', icon: '📖', category: 'learning', xpReward: 250, rarity: 'rare', check: (s: any) => (s.total_questions_answered || 0) >= 50, req: 50, field: 'total_questions_answered' },
+  { id: '4', title: 'Bookworm', description: 'Answer 100 questions', icon: '📚', category: 'learning', xpReward: 500, rarity: 'epic', check: (s: any) => (s.total_questions_answered || 0) >= 100, req: 100, field: 'total_questions_answered' },
+  { id: '5', title: 'Wisdom Master', description: 'Answer 500 questions', icon: '🎓', category: 'learning', xpReward: 1000, rarity: 'legendary', check: (s: any) => (s.total_questions_answered || 0) >= 500, req: 500, field: 'total_questions_answered' },
+  { id: '6', title: 'Getting Started', description: 'Maintain a 3-day streak', icon: '🌱', category: 'streak', xpReward: 30, rarity: 'common', check: (s: any) => (s.longest_streak || 0) >= 3 },
+  { id: '7', title: 'Week Warrior', description: 'Maintain a 7-day streak', icon: '🔥', category: 'streak', xpReward: 100, rarity: 'common', check: (s: any) => (s.longest_streak || 0) >= 7 },
+  { id: '8', title: 'Fortnight Fighter', description: 'Maintain a 14-day streak', icon: '💪', category: 'streak', xpReward: 250, rarity: 'rare', check: (s: any) => (s.longest_streak || 0) >= 14, req: 14, field: 'longest_streak' },
+  { id: '9', title: 'Month Master', description: 'Maintain a 30-day streak', icon: '🏃', category: 'streak', xpReward: 500, rarity: 'epic', check: (s: any) => (s.longest_streak || 0) >= 30, req: 30, field: 'longest_streak' },
+  { id: '10', title: 'Year Legend', description: '365-day streak', icon: '👑', category: 'streak', xpReward: 5000, rarity: 'legendary', check: (s: any) => (s.longest_streak || 0) >= 365, req: 365, field: 'longest_streak' },
+  { id: '11', title: 'Quick Thinker', description: 'Get 10 correct answers', icon: '⚡', category: 'mastery', xpReward: 50, rarity: 'common', check: (s: any) => (s.correct_answers || 0) >= 10 },
+  { id: '12', title: 'Sharp Mind', description: 'Get 50 correct answers', icon: '💯', category: 'mastery', xpReward: 150, rarity: 'rare', check: (s: any) => (s.correct_answers || 0) >= 50, req: 50, field: 'correct_answers' },
+  { id: '13', title: 'Subject Specialist', description: 'Get 200 correct answers', icon: '🏅', category: 'mastery', xpReward: 500, rarity: 'epic', check: (s: any) => (s.correct_answers || 0) >= 200, req: 200, field: 'correct_answers' },
+  { id: '14', title: 'Genius', description: 'Get 1000 correct answers', icon: '🧠', category: 'mastery', xpReward: 2000, rarity: 'legendary', check: (s: any) => (s.correct_answers || 0) >= 1000, req: 1000, field: 'correct_answers' },
+  { id: '15', title: 'XP Collector', description: 'Earn 500 XP', icon: '⭐', category: 'special', xpReward: 50, rarity: 'common', check: (s: any) => (s.total_xp || 0) >= 500 },
+  { id: '16', title: 'XP Hunter', description: 'Earn 2000 XP', icon: '🌟', category: 'special', xpReward: 200, rarity: 'rare', check: (s: any) => (s.total_xp || 0) >= 2000, req: 2000, field: 'total_xp' },
+  { id: '17', title: 'XP Legend', description: 'Earn 10000 XP', icon: '👑', category: 'special', xpReward: 1000, rarity: 'legendary', check: (s: any) => (s.total_xp || 0) >= 10000, req: 10000, field: 'total_xp' },
+];
 
 export async function GET(request: NextRequest) {
   try {
-    // In production, fetch from Supabase based on authenticated user
-    const achievements = [
-      // Learning Achievements
-      { id: '1', title: 'First Steps', description: 'Complete your first lesson', icon: '👣', category: 'learning', xpReward: 50, earned: true, earnedAt: '2 weeks ago', rarity: 'common' },
-      { id: '2', title: 'Knowledge Seeker', description: 'Complete 10 lessons', icon: '🔍', category: 'learning', xpReward: 100, earned: true, earnedAt: '1 week ago', rarity: 'common' },
-      { id: '3', title: 'Scholar', description: 'Complete 50 lessons', icon: '📖', category: 'learning', xpReward: 250, earned: false, progress: 32, requirement: 50, rarity: 'rare' },
-      { id: '4', title: 'Bookworm', description: 'Complete 100 lessons', icon: '📚', category: 'learning', xpReward: 500, earned: false, progress: 32, requirement: 100, rarity: 'epic' },
-      { id: '5', title: 'Wisdom Master', description: 'Complete all lessons in a subject', icon: '🎓', category: 'learning', xpReward: 1000, earned: false, rarity: 'legendary' },
-      
-      // Streak Achievements
-      { id: '6', title: 'Getting Started', description: 'Maintain a 3-day streak', icon: '🌱', category: 'streak', xpReward: 30, earned: true, earnedAt: '1 week ago', rarity: 'common' },
-      { id: '7', title: 'Week Warrior', description: 'Maintain a 7-day streak', icon: '🔥', category: 'streak', xpReward: 100, earned: true, earnedAt: '3 days ago', rarity: 'common' },
-      { id: '8', title: 'Fortnight Fighter', description: 'Maintain a 14-day streak', icon: '💪', category: 'streak', xpReward: 250, earned: false, progress: 7, requirement: 14, rarity: 'rare' },
-      { id: '9', title: 'Month Master', description: 'Maintain a 30-day streak', icon: '🏃', category: 'streak', xpReward: 500, earned: false, progress: 7, requirement: 30, rarity: 'epic' },
-      { id: '10', title: 'Year Legend', description: 'Maintain a 365-day streak', icon: '👑', category: 'streak', xpReward: 5000, earned: false, progress: 7, requirement: 365, rarity: 'legendary' },
-      
-      // Mastery Achievements
-      { id: '11', title: 'Quick Thinker', description: 'Answer 10 questions correctly', icon: '⚡', category: 'mastery', xpReward: 50, earned: true, earnedAt: '5 days ago', rarity: 'common' },
-      { id: '12', title: 'Perfectionist', description: 'Get 100% on any quiz', icon: '💯', category: 'mastery', xpReward: 150, earned: true, earnedAt: '4 days ago', rarity: 'rare' },
-      { id: '13', title: 'Chapter Champion', description: 'Complete a chapter with 90%+ accuracy', icon: '🏅', category: 'mastery', xpReward: 200, earned: false, rarity: 'rare' },
-      { id: '14', title: 'Subject Specialist', description: 'Score 90%+ in all chapters of a subject', icon: '🌟', category: 'mastery', xpReward: 750, earned: false, rarity: 'epic' },
-      { id: '15', title: 'Genius', description: 'Answer 100 questions without a mistake', icon: '🧠', category: 'mastery', xpReward: 2000, earned: false, progress: 23, requirement: 100, rarity: 'legendary' },
-      
-      // Social Achievements
-      { id: '16', title: 'Profile Complete', description: 'Complete your learning profile', icon: '✨', category: 'social', xpReward: 25, earned: true, earnedAt: '2 weeks ago', rarity: 'common' },
-      { id: '17', title: 'Feedback Friend', description: 'Give feedback on 5 explanations', icon: '💬', category: 'social', xpReward: 75, earned: false, progress: 2, requirement: 5, rarity: 'common' },
-      { id: '18', title: 'Helper', description: 'Help 10 students with their doubts', icon: '🤝', category: 'social', xpReward: 200, earned: false, rarity: 'rare' },
-      { id: '19', title: 'Community Star', description: 'Get 50 thanks from other students', icon: '⭐', category: 'social', xpReward: 500, earned: false, rarity: 'epic' },
-      
-      // Special Achievements
-      { id: '20', title: 'Early Bird', description: 'Study before 7 AM', icon: '🌅', category: 'special', xpReward: 50, earned: true, earnedAt: '1 week ago', rarity: 'common' },
-      { id: '21', title: 'Night Owl', description: 'Study after 10 PM', icon: '🦉', category: 'special', xpReward: 50, earned: true, earnedAt: '6 days ago', rarity: 'common' },
-      { id: '22', title: 'Weekend Warrior', description: 'Study on both Saturday and Sunday', icon: '🏆', category: 'special', xpReward: 75, earned: true, earnedAt: '3 days ago', rarity: 'rare' },
-      { id: '23', title: 'Multi-Talented', description: 'Study 3 different subjects in one day', icon: '🎭', category: 'special', xpReward: 100, earned: false, rarity: 'rare' },
-      { id: '24', title: 'Speed Demon', description: 'Complete a quiz in under 2 minutes with 100% accuracy', icon: '💨', category: 'special', xpReward: 300, earned: false, rarity: 'epic' }
-    ];
+    const supabase: any = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { data: stats } = await supabase
+      .from('user_stats')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    const s = stats || {};
+
+    const achievements = ACHIEVEMENT_DEFS.map(def => ({
+      id: def.id,
+      title: def.title,
+      description: def.description,
+      icon: def.icon,
+      category: def.category,
+      xpReward: def.xpReward,
+      rarity: def.rarity,
+      earned: def.check(s),
+      progress: def.field ? (s[def.field] || 0) : undefined,
+      requirement: def.req,
+    }));
 
     return NextResponse.json({ success: true, achievements });
   } catch (error) {
     console.error('Achievements API error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch achievements' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { achievementId } = body;
-
-    // In production, mark achievement as earned in Supabase
-    // Also grant XP reward to user
-
-    return NextResponse.json({ success: true, message: 'Achievement unlocked!' });
-  } catch (error) {
-    console.error('Achievement unlock error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to unlock achievement' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to fetch achievements' }, { status: 500 });
   }
 }

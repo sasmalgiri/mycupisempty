@@ -43,7 +43,9 @@ export async function GET(request: NextRequest) {
         .eq('id', quizId)
         .single();
 
-      if (error) throw error;
+      if (error || !quiz) {
+        return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
+      }
 
       // If host, include participants
       let participants: any[] = [];
@@ -286,8 +288,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Quiz not found or not authorized' }, { status: 404 });
       }
 
-      const nextQ = quiz.current_question + 1;
-      const totalQuestions = quiz.questions.length;
+      const nextQ = (quiz.current_question || 0) + 1;
+      const totalQuestions = quiz.questions?.length || 0;
 
       if (nextQ >= totalQuestions) {
         return NextResponse.json({ error: 'No more questions', finished: true }, { status: 400 });
