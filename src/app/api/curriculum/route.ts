@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
               .upsert({
                 subject_id: insertedSubject.id,
                 ...chapter,
-                ncert_pdf_url: `https://ncert.nic.in/textbook/pdf/${subject.book_code}${String(chapter.chapter_number).padStart(2, '0')}.pdf`,
+                ncert_pdf_url: `https://ncert.nic.in/textbook.php?${subject.book_code}=${String(chapter.chapter_number).padStart(2, '0')}`,
               }, { onConflict: 'subject_id,chapter_number' });
           }
         }

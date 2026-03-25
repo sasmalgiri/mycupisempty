@@ -9,10 +9,6 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'ncert.nic.in',
-      },
-      {
-        protocol: 'https',
         hostname: '*.supabase.co',
       },
     ],

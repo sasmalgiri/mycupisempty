@@ -251,7 +251,7 @@ export default function HomePage() {
             <div>
               <h4 className="font-bold mb-4">Resources</h4>
               <ul className="space-y-2 text-gray-400">
-                <li>NCERT Textbooks</li>
+                <li>NCERT-Aligned Curriculum</li>
                 <li>Practice Questions</li>
                 <li>AI Tutor</li>
                 <li>Study Materials</li>
@@ -268,7 +268,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-gray-500">
-            <p>© 2024 MyCupIsEmpty. All rights reserved. Content sourced from NCERT (ncert.nic.in).</p>
+            <p>© 2024 MyCupIsEmpty. All rights reserved. Curriculum aligned with NCERT/CBSE framework.</p>
           </div>
         </div>
       </footer>

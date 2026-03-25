@@ -42,7 +42,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-xl font-semibold mb-3">4. Content & Intellectual Property</h2>
               <p className="text-gray-600 leading-relaxed">
-                Educational content provided through the platform is for personal learning only. NCERT curriculum references are used for educational alignment. AI-generated explanations are provided as supplementary learning aids and should not replace formal education.
+                All explanations and learning content on this platform are AI-generated and original. Our curriculum structure is aligned with the NCERT/CBSE framework for educational reference only. NCERT, CBSE, and ICSE are trademarks of their respective organizations — MyCupIsEmpty is not affiliated with or endorsed by them. AI-generated content is provided as a supplementary learning aid and should not replace formal education or official textbooks.
               </p>
             </section>
 
