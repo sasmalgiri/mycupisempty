@@ -1,107 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-
-// Mock flashcard data
-const mockFlashcards = [
-  {
-    id: '1',
-    front: 'What is the Fundamental Theorem of Arithmetic?',
-    back: 'Every composite number can be expressed as a product of prime numbers in a unique way (ignoring the order of factors).',
-    subject: 'Mathematics',
-    chapter: 'Real Numbers',
-    difficulty: 'medium',
-    lastReviewed: null,
-    nextReview: new Date().toISOString(),
-    streak: 0,
-    easeFactor: 2.5,
-  },
-  {
-    id: '2',
-    front: 'What is photosynthesis?',
-    back: 'Photosynthesis is the process by which plants convert light energy, water, and carbon dioxide into glucose and oxygen. It occurs mainly in leaves.',
-    subject: 'Science',
-    chapter: 'Life Processes',
-    difficulty: 'easy',
-    lastReviewed: null,
-    nextReview: new Date().toISOString(),
-    streak: 0,
-    easeFactor: 2.5,
-  },
-  {
-    id: '3',
-    front: 'What is the quadratic formula?',
-    back: 'x = (-b ± √(b²-4ac)) / 2a\n\nThis formula gives the solutions to ax² + bx + c = 0',
-    subject: 'Mathematics',
-    chapter: 'Quadratic Equations',
-    difficulty: 'medium',
-    lastReviewed: null,
-    nextReview: new Date().toISOString(),
-    streak: 0,
-    easeFactor: 2.5,
-  },
-  {
-    id: '4',
-    front: 'What is Ohm\'s Law?',
-    back: 'V = IR\n\nVoltage (V) equals Current (I) multiplied by Resistance (R).\n\nUnit: Voltage in Volts, Current in Amperes, Resistance in Ohms',
-    subject: 'Science',
-    chapter: 'Electricity',
-    difficulty: 'easy',
-    lastReviewed: null,
-    nextReview: new Date().toISOString(),
-    streak: 0,
-    easeFactor: 2.5,
-  },
-  {
-    id: '5',
-    front: 'What is nationalism?',
-    back: 'Nationalism is a political ideology where people who share a common language, culture, and history believe they should form an independent nation-state. It was a major force in 19th century Europe.',
-    subject: 'Social Science',
-    chapter: 'Rise of Nationalism',
-    difficulty: 'medium',
-    lastReviewed: null,
-    nextReview: new Date().toISOString(),
-    streak: 0,
-    easeFactor: 2.5,
-  },
-  {
-    id: '6',
-    front: 'What is a balanced chemical equation?',
-    back: 'A balanced chemical equation has equal numbers of atoms of each element on both sides (reactants and products).\n\nExample: 2H₂ + O₂ → 2H₂O',
-    subject: 'Science',
-    chapter: 'Chemical Reactions',
-    difficulty: 'easy',
-    lastReviewed: null,
-    nextReview: new Date().toISOString(),
-    streak: 0,
-    easeFactor: 2.5,
-  },
-  {
-    id: '7',
-    front: 'What is the distance formula?',
-    back: 'd = √[(x₂-x₁)² + (y₂-y₁)²]\n\nThis formula calculates the distance between two points (x₁, y₁) and (x₂, y₂) in a coordinate plane.',
-    subject: 'Mathematics',
-    chapter: 'Coordinate Geometry',
-    difficulty: 'medium',
-    lastReviewed: null,
-    nextReview: new Date().toISOString(),
-    streak: 0,
-    easeFactor: 2.5,
-  },
-  {
-    id: '8',
-    front: 'What are the three laws of motion?',
-    back: '1. Law of Inertia: An object remains at rest or in uniform motion unless acted upon by an external force.\n\n2. F = ma: Force equals mass times acceleration.\n\n3. Action-Reaction: For every action, there is an equal and opposite reaction.',
-    subject: 'Science',
-    chapter: 'Force and Motion',
-    difficulty: 'hard',
-    lastReviewed: null,
-    nextReview: new Date().toISOString(),
-    streak: 0,
-    easeFactor: 2.5,
-  },
-];
 
 interface Flashcard {
   id: string;
@@ -117,7 +17,36 @@ interface Flashcard {
 }
 
 export default function FlashcardsPage() {
-  const [flashcards, setFlashcards] = useState<Flashcard[]>(mockFlashcards);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadCards = useCallback(async () => {
+    try {
+      const res = await fetch('/api/flashcards');
+      if (res.ok) {
+        const data = await res.json();
+        const cards = (data.cards || []).map((c: any) => ({
+          id: c.id,
+          front: c.front,
+          back: c.back,
+          subject: c.cardType || 'General',
+          chapter: '',
+          difficulty: c.easeFactor > 2.8 ? 'easy' : c.easeFactor < 2.0 ? 'hard' : 'medium',
+          lastReviewed: c.lastReviewed,
+          nextReview: c.nextReview || new Date().toISOString(),
+          streak: c.repetitions || 0,
+          easeFactor: c.easeFactor || 2.5,
+        }));
+        setFlashcards(cards);
+      }
+    } catch (err) {
+      console.error('Failed to load flashcards:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadCards(); }, [loadCards]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionStats, setSessionStats] = useState({ reviewed: 0, correct: 0, wrong: 0 });
@@ -145,27 +74,27 @@ export default function FlashcardsPage() {
 
   const handleFlip = () => setIsFlipped(!isFlipped);
 
-  const handleResponse = (quality: 'again' | 'hard' | 'good' | 'easy') => {
+  const handleResponse = async (quality: 'again' | 'hard' | 'good' | 'easy') => {
     if (!currentCard) return;
 
     const qualityMap = { again: 0, hard: 1, good: 3, easy: 5 };
     const q = qualityMap[quality];
-    
-    // SM-2 Algorithm (simplified)
+
+    // SM-2 Algorithm (simplified) — local update for instant UI
     let newEaseFactor = currentCard.easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
     newEaseFactor = Math.max(1.3, newEaseFactor);
-    
+
     let interval = 1;
     if (q >= 3) {
       if (currentCard.streak === 0) interval = 1;
       else if (currentCard.streak === 1) interval = 6;
       else interval = Math.round(currentCard.streak * newEaseFactor);
     }
-    
+
     const nextReview = new Date();
     nextReview.setDate(nextReview.getDate() + interval);
-    
-    // Update flashcard
+
+    // Update local state immediately
     const updatedCards = flashcards.map(card =>
       card.id === currentCard.id
         ? {
@@ -177,14 +106,21 @@ export default function FlashcardsPage() {
           }
         : card
     );
-    
+
     setFlashcards(updatedCards);
     setSessionStats(prev => ({
       reviewed: prev.reviewed + 1,
       correct: prev.correct + (q >= 3 ? 1 : 0),
       wrong: prev.wrong + (q < 3 ? 1 : 0),
     }));
-    
+
+    // Persist to Supabase in background
+    fetch('/api/flashcards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'review', flashcard_id: currentCard.id, quality: q }),
+    }).catch(err => console.error('Failed to save review:', err));
+
     // Move to next card
     setIsFlipped(false);
     if (currentIndex < filteredCards.length - 1) {
@@ -194,23 +130,41 @@ export default function FlashcardsPage() {
     }
   };
 
-  const handleCreateCard = () => {
+  const handleCreateCard = async () => {
     if (!newCard.front.trim() || !newCard.back.trim()) return;
-    
-    const card: Flashcard = {
-      id: Date.now().toString(),
-      front: newCard.front,
-      back: newCard.back,
-      subject: newCard.subject,
-      chapter: 'Custom',
-      difficulty: 'medium',
-      lastReviewed: null,
-      nextReview: new Date().toISOString(),
-      streak: 0,
-      easeFactor: 2.5,
-    };
-    
-    setFlashcards([...flashcards, card]);
+
+    try {
+      const res = await fetch('/api/flashcards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          front: newCard.front.trim(),
+          back: newCard.back.trim(),
+          subject: newCard.subject,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const card: Flashcard = {
+          id: data.cardId || Date.now().toString(),
+          front: newCard.front,
+          back: newCard.back,
+          subject: newCard.subject,
+          chapter: 'Custom',
+          difficulty: 'medium',
+          lastReviewed: null,
+          nextReview: new Date().toISOString(),
+          streak: 0,
+          easeFactor: 2.5,
+        };
+        setFlashcards([...flashcards, card]);
+      }
+    } catch (err) {
+      console.error('Failed to create card:', err);
+    }
+
     setNewCard({ front: '', back: '', subject: 'Mathematics' });
     setShowCreateModal(false);
   };
@@ -253,6 +207,11 @@ export default function FlashcardsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full" />
+          </div>
+        ) : (<>
         {/* Stats Bar */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -469,6 +428,7 @@ export default function FlashcardsPage() {
             ))}
           </div>
         </div>
+        </>)}
       </div>
 
       {/* Create Modal */}
