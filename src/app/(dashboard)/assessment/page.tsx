@@ -184,43 +184,129 @@ export default function AssessmentPage() {
 
   if (showIntro) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center p-4">
-        <div className="max-w-xl w-full text-center">
-          <div className="mb-8">
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 pb-16">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          {/* Hero Section */}
+          <div className="text-center mb-12">
             <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-3xl flex items-center justify-center text-4xl mx-auto shadow-xl shadow-primary-500/30 mb-6">
               🎯
             </div>
             <h1 className="text-3xl font-bold mb-4">Discover Your Learning Style</h1>
-            <p className="text-gray-600 text-lg">
-              Answer 10 quick questions to find out how you learn best. 
-              This helps us personalize your content!
+            <p className="text-gray-600 text-lg max-w-xl mx-auto">
+              Answer 10 quick questions to find out how you learn best.
+              This helps our AI Guru personalize everything for you.
             </p>
-          </div>
 
-          <div className="flex justify-center gap-6 mb-8">
-            {[
-              { icon: '👁️', name: 'Visual', color: 'bg-blue-100' },
-              { icon: '👂', name: 'Auditory', color: 'bg-green-100' },
-              { icon: '📖', name: 'Reading', color: 'bg-yellow-100' },
-              { icon: '🖐️', name: 'Kinesthetic', color: 'bg-red-100' },
-            ].map((style) => (
-              <div key={style.name} className="text-center">
-                <div className={`w-16 h-16 ${style.color} rounded-full flex items-center justify-center text-2xl mb-2`}>
-                  {style.icon}
+            <div className="flex justify-center gap-6 my-8">
+              {[
+                { icon: '👁️', name: 'Visual', color: 'bg-blue-100' },
+                { icon: '👂', name: 'Auditory', color: 'bg-green-100' },
+                { icon: '📖', name: 'Reading', color: 'bg-yellow-100' },
+                { icon: '🖐️', name: 'Kinesthetic', color: 'bg-red-100' },
+              ].map((style) => (
+                <div key={style.name} className="text-center">
+                  <div className={`w-16 h-16 ${style.color} rounded-full flex items-center justify-center text-2xl mb-2`}>
+                    {style.icon}
+                  </div>
+                  <span className="text-sm font-medium text-gray-600">{style.name}</span>
                 </div>
-                <span className="text-sm font-medium text-gray-600">{style.name}</span>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowIntro(false)}
+              className="btn-primary text-lg px-8 py-4"
+            >
+              Start Assessment →
+            </button>
+            <p className="mt-3 text-sm text-gray-500">Takes about 2 minutes</p>
           </div>
 
-          <button
-            onClick={() => setShowIntro(false)}
-            className="btn-primary text-lg px-8 py-4"
-          >
-            Start Assessment →
-          </button>
+          {/* FOR PARENTS & TEACHERS — Why This Matters */}
+          <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">For Parents &amp; Teachers</h2>
+            <p className="text-gray-600 mb-6">
+              MyCupIsEmpty is not just another tutoring app. We build the <strong>whole human</strong> — academics,
+              thinking ability, character, and life skills — all woven into one learning journey.
+            </p>
 
-          <p className="mt-4 text-sm text-gray-500">Takes about 2 minutes</p>
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Our 20+ Teaching Methods</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Based on your child&apos;s VARK learning style, our AI selects the best teaching approach:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+              {[
+                { name: 'Feynman Technique', desc: 'Explain complex ideas in simple words — if you can teach it to a 5-year-old, you truly understand it.', icon: '🧠', tag: 'Modern' },
+                { name: 'Socratic Method', desc: 'Learning through guided questions — the student discovers answers themselves, building deeper understanding.', icon: '❓', tag: 'Classical' },
+                { name: 'Gurukul Method', desc: 'The ancient Guru-Shishya tradition of personalized mentoring through dialogue and respect.', icon: '🙏', tag: 'Indian' },
+                { name: 'Vedic Math', desc: 'Ancient Indian mathematical sutras for faster, more elegant problem-solving.', icon: '🕉️', tag: 'Indian' },
+                { name: 'Mind Mapping', desc: 'Visual branching from central concepts — perfect for visual learners who think in connections.', icon: '🗺️', tag: 'Modern' },
+                { name: 'Storytelling (Katha)', desc: 'Learning through narratives — the Kathasaritsagara tradition of teaching through memorable stories.', icon: '📖', tag: 'Indian' },
+                { name: 'Spaced Repetition', desc: 'Scientifically proven: reviewing at increasing intervals builds long-term memory.', icon: '🔄', tag: 'Scientific' },
+                { name: 'Active Recall', desc: 'Test yourself immediately after learning — the most effective memory technique known to science.', icon: '🧪', tag: 'Scientific' },
+                { name: 'Project-Based Learning', desc: 'Build real projects to learn concepts — hands-on, practical, and deeply engaging.', icon: '🏗️', tag: 'Modern' },
+                { name: 'Visualization (Dhyana)', desc: 'Create vivid mental images of concepts — uses the meditative tradition for deeper understanding.', icon: '🧘', tag: 'Indian' },
+              ].map((method) => (
+                <div key={method.name} className="flex gap-3 p-3 rounded-xl border border-gray-100 hover:border-primary-200 transition-all">
+                  <span className="text-2xl flex-shrink-0">{method.icon}</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-gray-900 text-sm">{method.name}</h4>
+                      <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">{method.tag}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{method.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <h3 className="text-lg font-bold text-gray-800 mb-4">How We Build Character</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Character development is woven into every learning session — not taught separately.
+              Our framework draws from four pillars of Indian wisdom:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
+                <h4 className="font-bold text-orange-800 mb-1">Ishwar Chandra Vidyasagar</h4>
+                <p className="text-sm text-orange-700">
+                  Compassion (Daya), Perseverance (Adhyavasaya), Truthfulness, Self-Reliance.
+                  The &quot;Ocean of Compassion&quot; who walked miles barefoot to school and reformed education for all.
+                </p>
+              </div>
+              <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+                <h4 className="font-bold text-purple-800 mb-1">Bhagavad Gita</h4>
+                <p className="text-sm text-purple-700">
+                  Karma Yoga (selfless action), Equanimity (Samatva), Self-Discipline (Atma-sanyama).
+                  Focus on effort, not results. Stay balanced in success and failure.
+                </p>
+              </div>
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                <h4 className="font-bold text-blue-800 mb-1">Indian Shastra</h4>
+                <p className="text-sm text-blue-700">
+                  Love of Learning (Sa Vidya Ya Vimuktaye), Dharma (doing what is right),
+                  Humility (Vidya Dadati Vinayam). True education liberates the mind.
+                </p>
+              </div>
+              <div className="bg-green-50 rounded-xl p-4 border border-green-100">
+                <h4 className="font-bold text-green-800 mb-1">Bratachari Movement</h4>
+                <p className="text-sm text-green-700">
+                  Gurusaday Dutt&apos;s 5 vows: Knowledge, Labor, Truth, Unity, Joy.
+                  Complete youth development through culture, fitness, and character.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <p className="text-sm text-gray-600 italic">
+                <strong>Note:</strong> Character development in MyCupIsEmpty is about self-management,
+                respect, accountability, kindness, and practical wisdom — NOT religious instruction
+                or moral policing. These are universal values expressed through India&apos;s rich cultural heritage.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
