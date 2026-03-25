@@ -43,6 +43,7 @@ export default function DashboardLayout({
   const [userProfile, setUserProfile] = useState({
     name: '',
     class: 0,
+    board: 'cbse',
     xp: 0,
     streak: 0,
   });
@@ -56,7 +57,7 @@ export default function DashboardLayout({
       // Fetch profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, class_level')
+        .select('full_name, class_level, board_code')
         .eq('id', user.id)
         .single() as any;
 
@@ -70,6 +71,7 @@ export default function DashboardLayout({
       setUserProfile({
         name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Student',
         class: profile?.class_level || 0,
+        board: profile?.board_code || 'cbse',
         xp: stats?.total_xp || 0,
         streak: stats?.current_streak || 0,
       });
@@ -117,7 +119,7 @@ export default function DashboardLayout({
             </div>
             <div>
               <p className="font-semibold text-gray-900">{userProfile.name}</p>
-              <p className="text-sm text-gray-500">Class {userProfile.class}</p>
+              <p className="text-sm text-gray-500">Class {userProfile.class} · {userProfile.board === 'wb_board' ? 'WBBSE' : userProfile.board?.toUpperCase()}</p>
             </div>
           </div>
           <div className="flex gap-2">

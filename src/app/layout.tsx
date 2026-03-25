@@ -29,8 +29,8 @@ export const metadata: Metadata = {
     default: 'MyCupIsEmpty - AI-Powered Adaptive Learning Platform for Indian Students',
     template: '%s | MyCupIsEmpty',
   },
-  description: 'Personalized NCERT education for Class 1-12 using 20+ teaching methods (Feynman, Gurukul, Vedic Math, Socratic). AI Guru adapts to your VARK learning style. Free for students.',
-  keywords: ['NCERT learning app', 'CBSE online tutor', 'ICSE study platform', 'AI tutor India', 'adaptive learning', 'Vedic Math', 'Gurukul method', 'VARK learning style', 'Class 1-12 education', 'personalized learning', 'free education app India', 'Feynman technique', 'spaced repetition', 'interactive learning games'],
+  description: 'Personalized education for CBSE, ICSE, West Bengal Board (WBBSE) & State Boards. Class 1-12 with 20+ teaching methods. AI Guru adapts to your VARK learning style. Free for students.',
+  keywords: ['NCERT learning app', 'CBSE online tutor', 'ICSE study platform', 'West Bengal Board WBBSE', 'WBBSE learning app', 'state board education', 'AI tutor India', 'adaptive learning', 'Vedic Math', 'Gurukul method', 'VARK learning style', 'Class 1-12 education', 'personalized learning', 'free education app India', 'Feynman technique', 'spaced repetition', 'interactive learning games'],
   authors: [{ name: 'MyCupIsEmpty', url: BASE_URL }],
   creator: 'MyCupIsEmpty',
   publisher: 'MyCupIsEmpty',
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'MyCupIsEmpty - AI-Powered Adaptive Learning for Indian Students',
-    description: 'Learn NCERT curriculum with AI that adapts to YOUR learning style. 20+ teaching methods. Free for Class 1-12 students.',
+    description: 'Learn CBSE, ICSE, WBBSE & State Board curriculum with AI that adapts to YOUR learning style. 20+ teaching methods. Free for Class 1-12.',
     url: BASE_URL,
     siteName: 'MyCupIsEmpty',
     type: 'website',
@@ -96,8 +96,8 @@ const jsonLd = {
   educationalAlignment: {
     '@type': 'AlignmentObject',
     alignmentType: 'educationalFramework',
-    educationalFramework: 'NCERT/CBSE',
-    targetName: 'Class 1-12 Curriculum',
+    educationalFramework: 'CBSE/ICSE/WBBSE/State Boards',
+    targetName: 'Class 1-12 Multi-Board Curriculum',
   },
   featureList: [
     'AI-powered personalized tutoring',

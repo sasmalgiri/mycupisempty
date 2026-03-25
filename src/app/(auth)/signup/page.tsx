@@ -14,6 +14,7 @@ export default function SignupPage() {
     confirmPassword: '',
     currentClass: '6',
     role: 'student',
+    board: 'cbse',
   });
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -62,12 +63,13 @@ export default function SignupPage() {
       if (error) throw error;
 
       if (data.user) {
-        // Update profile with class_level and role (trigger only sets name/email)
+        // Update profile with class_level, role, and board (trigger only sets name/email)
         await (supabase as any)
           .from('profiles')
           .update({
             class_level: parseInt(formData.currentClass),
             role: formData.role,
+            board_code: formData.board,
           })
           .eq('id', data.user.id);
 
@@ -192,6 +194,32 @@ export default function SignupPage() {
                   <option value="parent">Parent</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="board" className="block text-sm font-medium text-gray-700 mb-2">
+                Education Board
+              </label>
+              <select
+                id="board"
+                name="board"
+                value={formData.board}
+                onChange={handleChange}
+                className="input-field"
+                title="Select your education board"
+              >
+                <option value="cbse">CBSE</option>
+                <option value="icse">ICSE</option>
+                <option value="wb_board">West Bengal Board (WBBSE)</option>
+                <option value="up_board">UP Board</option>
+                <option value="mp_board">MP Board</option>
+                <option value="bihar_board">Bihar Board</option>
+                <option value="mh_board">Maharashtra Board</option>
+                <option value="tn_board">Tamil Nadu Board</option>
+                <option value="ka_board">Karnataka Board</option>
+                <option value="rj_board">Rajasthan Board</option>
+                <option value="nios">NIOS</option>
+              </select>
             </div>
 
             <div>

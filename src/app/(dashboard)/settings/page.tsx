@@ -8,6 +8,7 @@ interface UserSettings {
   name: string;
   email: string;
   classNumber: number;
+  board: string;
   learningStyle: {
     visual: number;
     auditory: number;
@@ -23,11 +24,26 @@ interface UserSettings {
   };
 }
 
+const BOARD_OPTIONS = [
+  { value: 'cbse', label: 'CBSE' },
+  { value: 'icse', label: 'ICSE' },
+  { value: 'wb_board', label: 'West Bengal Board (WBBSE)' },
+  { value: 'up_board', label: 'UP Board' },
+  { value: 'mp_board', label: 'MP Board' },
+  { value: 'bihar_board', label: 'Bihar Board' },
+  { value: 'mh_board', label: 'Maharashtra Board' },
+  { value: 'tn_board', label: 'Tamil Nadu Board' },
+  { value: 'ka_board', label: 'Karnataka Board' },
+  { value: 'rj_board', label: 'Rajasthan Board' },
+  { value: 'nios', label: 'NIOS' },
+];
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings>({
     name: '',
     email: '',
     classNumber: 0,
+    board: 'cbse',
     learningStyle: { visual: 0, auditory: 0, reading: 0, kinesthetic: 0 },
     preferences: {
       dailyGoal: 30,
@@ -48,7 +64,7 @@ export default function SettingsPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, class_level')
+        .select('full_name, class_level, board_code')
         .eq('id', user.id)
         .single() as any;
 
@@ -63,6 +79,7 @@ export default function SettingsPage() {
         name: profile?.full_name || user.user_metadata?.full_name || '',
         email: user.email || '',
         classNumber: profile?.class_level || 0,
+        board: profile?.board_code || 'cbse',
         learningStyle: {
           visual: style?.visual_score || 0,
           auditory: style?.auditory_score || 0,
@@ -86,6 +103,7 @@ export default function SettingsPage() {
         .update({
           full_name: settings.name,
           class_level: settings.classNumber,
+          board_code: settings.board,
         })
         .eq('id', user.id);
     } finally {
@@ -193,6 +211,24 @@ export default function SettingsPage() {
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
                     <option key={n} value={n}>Class {n}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="board" className="block text-sm font-medium text-gray-700 mb-2">
+                  Education Board
+                </label>
+                <select
+                  id="board"
+                  name="board"
+                  value={settings.board}
+                  onChange={e => setSettings({ ...settings, board: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  title="Select your education board"
+                >
+                  {BOARD_OPTIONS.map(b => (
+                    <option key={b.value} value={b.value}>{b.label}</option>
                   ))}
                 </select>
               </div>
