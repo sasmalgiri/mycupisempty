@@ -15,6 +15,7 @@
 
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { checkPeerPrompt, findTemplate } from '@/lib/content-safety';
 
 const INVITE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // no O/0/1/I
 
@@ -194,11 +195,42 @@ export async function POST(req: Request) {
     }
 
     if (action === 'seed_today_challenge') {
-      // Any member can seed today's shared challenge (simple, fair for small circles).
       const circleId = body.circleId;
-      const prompt = String(body.prompt || '').trim().slice(0, 300);
-      const subjectHint = body.subjectHint ? String(body.subjectHint).slice(0, 40) : null;
-      if (!circleId || !prompt) return NextResponse.json({ error: 'circleId + prompt required' }, { status: 400 });
+      if (!circleId) return NextResponse.json({ error: 'circleId required' }, { status: 400 });
+
+      // Two paths: curated template (any member) or free-form text (founder only
+      // + block-list filter). This stops a random member from posting abusive
+      // prompts to the whole circle.
+      let prompt = '';
+      let subjectHint: string | null = null;
+
+      if (body.templateId) {
+        const tpl = findTemplate(String(body.templateId));
+        if (!tpl) return NextResponse.json({ error: 'Unknown template' }, { status: 400 });
+        prompt = tpl.prompt;
+        subjectHint = tpl.subjectHint || null;
+      } else {
+        // Free-form requires founder role
+        const { data: circle } = await supabase
+          .from('study_circles')
+          .select('created_by')
+          .eq('id', circleId)
+          .maybeSingle();
+        if (!circle) return NextResponse.json({ error: 'Circle not found' }, { status: 404 });
+        if (circle.created_by !== user.id) {
+          return NextResponse.json({
+            error: 'Only the circle founder can write custom prompts. Pick a template, or ask the founder.',
+          }, { status: 403 });
+        }
+
+        const raw = String(body.prompt || '').trim();
+        const verdict = checkPeerPrompt(raw, { minLen: 5, maxLen: 300 });
+        if (!verdict.ok) {
+          return NextResponse.json({ error: verdict.hint || 'That prompt is not allowed.' }, { status: 400 });
+        }
+        prompt = raw.slice(0, 300);
+        subjectHint = body.subjectHint ? String(body.subjectHint).slice(0, 40) : null;
+      }
 
       const { data, error } = await supabase
         .from('circle_shared_challenges')

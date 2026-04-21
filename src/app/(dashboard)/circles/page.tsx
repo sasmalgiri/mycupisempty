@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { CIRCLE_PROMPT_TEMPLATES } from '@/lib/content-safety';
 
 interface Circle {
   id: string;
@@ -111,15 +112,36 @@ export default function CirclesPage() {
     load();
   };
 
-  const seedChallenge = async (circleId: string) => {
-    const prompt = window.prompt("What's today's shared question for your circle?");
-    if (!prompt?.trim()) return;
-    await fetch('/api/circles', {
+  const [pickerCircleId, setPickerCircleId] = useState<string | null>(null);
+  const [customPrompt, setCustomPrompt] = useState('');
+
+  const pickTemplate = async (circleId: string, templateId: string) => {
+    const res = await fetch('/api/circles', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'seed_today_challenge', circleId, prompt: prompt.trim() }),
-    });
+      body: JSON.stringify({ action: 'seed_today_challenge', circleId, templateId }),
+    }).then(r => r.json());
+    if (!res?.success) { setFlash(res?.error || 'Could not set prompt'); setTimeout(() => setFlash(null), 5000); }
+    setPickerCircleId(null);
     load();
+  };
+
+  const submitCustom = async (circleId: string) => {
+    const prompt = customPrompt.trim();
+    if (!prompt) return;
+    const res = await fetch('/api/circles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'seed_today_challenge', circleId, prompt }),
+    }).then(r => r.json());
+    if (res?.success) {
+      setPickerCircleId(null);
+      setCustomPrompt('');
+      load();
+    } else {
+      setFlash(res?.error || 'Could not set prompt');
+      setTimeout(() => setFlash(null), 5000);
+    }
   };
 
   return (
@@ -238,12 +260,71 @@ export default function CirclesPage() {
                       )}
                     </div>
                   </div>
+                ) : pickerCircleId === c.id ? (
+                  <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-2">
+                      Pick a starter
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-2 mb-3">
+                      {CIRCLE_PROMPT_TEMPLATES.map((tpl) => (
+                        <button
+                          key={tpl.id}
+                          type="button"
+                          onClick={() => pickTemplate(c.id, tpl.id)}
+                          className="text-left p-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:border-primary-400 transition-colors"
+                        >
+                          <div className="flex items-start gap-2">
+                            <span className="text-base flex-shrink-0" aria-hidden="true">{tpl.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs leading-snug">{tpl.prompt}</p>
+                              {tpl.subjectHint && (
+                                <p className="text-[10px] text-gray-500 mt-0.5">{tpl.subjectHint}</p>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {c.isFounder ? (
+                      <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-[10px] text-gray-500 mb-2">Or write your own (founder only):</p>
+                        <textarea
+                          value={customPrompt}
+                          onChange={(e) => setCustomPrompt(e.target.value)}
+                          placeholder="Write today's prompt…"
+                          maxLength={300}
+                          rows={2}
+                          className="w-full px-3 py-2 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 mb-2"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => submitCustom(c.id)}
+                            disabled={!customPrompt.trim()}
+                            className="flex-1 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-semibold disabled:opacity-60"
+                          >Post custom prompt</button>
+                          <button
+                            type="button"
+                            onClick={() => { setPickerCircleId(null); setCustomPrompt(''); }}
+                            className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+                          >Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setPickerCircleId(null)}
+                        className="text-[10px] text-gray-500 hover:text-gray-700"
+                      >Cancel</button>
+                    )}
+                  </div>
                 ) : (
                   <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-center">
                     <p className="text-xs text-gray-500 mb-2">No shared challenge yet for today.</p>
                     <button
                       type="button"
-                      onClick={() => seedChallenge(c.id)}
+                      onClick={() => setPickerCircleId(c.id)}
                       className="text-xs text-primary-600 hover:text-primary-700 font-semibold"
                     >
                       Set one →

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useGuruChat } from '@/hooks/upgrade';
 import { Slider, MethodCard, BuddyBubble } from '@/components/ui/upgrade';
 import { Button, LoadingSpinner } from '@/components/ui/index';
@@ -57,10 +58,13 @@ export default function GuruPage() {
     sendMessage, resetChat,
   } = useGuruChat();
 
+  const searchParams = useSearchParams();
+
   const [input, setInput] = useState('');
   const [showSettings, setShowSettings] = useState(true);
   const [showAllMethods, setShowAllMethods] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const autoSentRef = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -83,6 +87,37 @@ export default function GuruPage() {
       .catch(() => {});
     return () => { cancelled = true; };
   }, [setMethod, setIsSocratic]);
+
+  // Handle inbound URLs from Daily Mix mode entry points and elsewhere.
+  // ?q=... pre-fills (and auto-sends) a prompt; ?mode=... overrides the
+  // teaching method; ?socratic=1 forces socratic on; ?topic=... is passed
+  // as the topicId to sendMessage for context routing.
+  useEffect(() => {
+    const mode = searchParams?.get('mode') as ExplanationMode | null;
+    const socratic = searchParams?.get('socratic');
+    const q = searchParams?.get('q');
+    const topic = searchParams?.get('topic');
+
+    if (mode && MODE_TO_GURU[mode]) {
+      setMethod(MODE_TO_GURU[mode].method);
+      setIsSocratic(MODE_TO_GURU[mode].socratic);
+    }
+    if (socratic === '1' || socratic === 'true') {
+      setIsSocratic(true);
+    }
+    if (q && !autoSentRef.current) {
+      autoSentRef.current = true;
+      const trimmed = q.trim().slice(0, 500);
+      setInput(trimmed);
+      setShowSettings(false);
+      // Defer so state updates from ?mode= land before the send
+      const t = setTimeout(() => {
+        sendMessage(trimmed, topic || undefined);
+        setInput('');
+      }, 60);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams, setMethod, setIsSocratic, sendMessage]);
 
   const handleSend = () => {
     if (!input.trim() || loading) return;

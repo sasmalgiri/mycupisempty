@@ -88,14 +88,18 @@ const SOURCE_LABELS: Record<string, string> = {
 
 // Mode-branched entry point for the New Concept step. Each learner archetype
 // sees a different door into the same topic — visual students get a concept
-// map shortcut, hands-on students jump to the lab, storytellers get a
-// companion narration, etc. Falls back to plain "Start Learning" otherwise.
+// map shortcut, hands-on students jump to an interactive activity, storytellers
+// get a companion narration, etc. Targets are real pages that exist today;
+// hands-on routes to /activities (virtual-lab activity) because /lab isn't a
+// page yet. Opens in a new tab so the Daily Mix session isn't lost.
 function ModeEntryPoint({
   mode,
   topic,
+  userId,
 }: {
   mode: ExplanationMode;
   topic: { id: string; title: string; subject_id?: string };
+  userId: string;
 }) {
   const subjectId = topic.subject_id;
 
@@ -128,7 +132,7 @@ function ModeEntryPoint({
       icon: '❓',
       label: 'Ask me questions — I want to think it out',
       blurb: "The Guru leads with questions, not answers.",
-      href: `/guru?topic=${topic.id}&socratic=1&q=${encodeURIComponent('Guide me through ' + topic.title + ' by asking me questions.')}`,
+      href: `/guru?topic=${topic.id}&socratic=1&mode=socratic&q=${encodeURIComponent('Guide me through ' + topic.title + ' by asking me questions.')}`,
     },
     drill: {
       icon: '⚡',
@@ -138,18 +142,37 @@ function ModeEntryPoint({
     },
     hands_on: {
       icon: '🧪',
-      label: 'Open in the virtual lab',
+      label: 'Try it in an interactive activity',
       blurb: 'Build it, try it, see what breaks.',
-      href: subjectId ? `/lab?subject=${subjectId}&topic=${topic.id}` : `/subjects`,
+      href: `/activities?topic=${topic.id}${subjectId ? `&subject=${subjectId}` : ''}&kind=virtual_lab`,
     },
   };
 
   const primary = primaries[mode] || primaries.step_by_step;
 
+  const onEnter = () => {
+    // Record that the student engaged with the concept via their preferred mode.
+    // This lets the adaptation loop connect mode choice → later outcomes without
+    // forcing the student to finish inside Daily Mix.
+    collectSignal({
+      user_id: userId || 'anonymous',
+      signal_type: 'concept_mode_entered',
+      category: 'preference',
+      source: 'daily_mix',
+      subject_id: topic.subject_id,
+      value: 1,
+      metadata: { mode, topic_id: topic.id, href: primary.href },
+    });
+    flushSignals();
+  };
+
   return (
     <div className="mb-4">
-      <Link
+      <a
         href={primary.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onEnter}
         className="block w-full text-left py-4 px-5 bg-gradient-to-r from-amber-100 to-orange-100 hover:from-amber-200 hover:to-orange-200 text-amber-900 rounded-xl font-semibold transition-colors mb-2 group"
       >
         <div className="flex items-center gap-3">
@@ -158,11 +181,11 @@ function ModeEntryPoint({
             <div className="text-base">{primary.label}</div>
             <div className="text-xs font-normal text-amber-800/80 mt-0.5">{primary.blurb}</div>
           </div>
-          <span className="opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" aria-hidden="true">→</span>
+          <span className="opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" aria-hidden="true">↗</span>
         </div>
-      </Link>
+      </a>
       <p className="text-[10px] text-gray-400 text-center">
-        Matching how you learn best. You can change that anytime.
+        Opens in a new tab. Come back here to keep your Daily Mix streak.
       </p>
     </div>
   );
@@ -850,6 +873,7 @@ export default function DailyMixPage() {
                 <ModeEntryPoint
                   mode={learningMode}
                   topic={mix.new_concept.topics}
+                  userId={userId}
                 />
               )}
 

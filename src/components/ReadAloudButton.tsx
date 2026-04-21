@@ -13,16 +13,20 @@
 import { useEffect, useState } from 'react';
 import { speak, stopSpeaking, isSpeaking, isTTSAvailable } from '@/lib/voice';
 import type { Locale } from '@/lib/i18n';
+import { useUserLocale } from '@/hooks/useUserLocale';
 
 interface Props {
   text: string | (() => string);
+  /** Override the auto-detected locale. Defaults to the student's profile language. */
   locale?: Locale;
   className?: string;
   label?: string;
   size?: 'sm' | 'md';
 }
 
-export default function ReadAloudButton({ text, locale = 'en', className = '', label, size = 'sm' }: Props) {
+export default function ReadAloudButton({ text, locale, className = '', label, size = 'sm' }: Props) {
+  const userLocale = useUserLocale();
+  const activeLocale: Locale = locale || userLocale;
   const [available, setAvailable] = useState(false);
   const [playing, setPlaying] = useState(false);
 
@@ -47,7 +51,7 @@ export default function ReadAloudButton({ text, locale = 'en', className = '', l
     const body = typeof text === 'function' ? text() : text;
     if (!body?.trim()) return;
     const ok = speak(body, {
-      locale,
+      locale: activeLocale,
       onEnd: () => setPlaying(false),
       onError: () => setPlaying(false),
     });
