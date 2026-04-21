@@ -10,22 +10,37 @@
  * It's a tripwire, not a wall.
  */
 
-// English + Hindi + Bengali roots that flag the post. Kept short and
-// conservative — false positives are annoying; missed slurs are worse.
-const BLOCK_PATTERNS: RegExp[] = [
-  // Generic slur / hate roots (stem-match so "stupid", "stupids", "stupidly" all hit)
-  /\b(stupid|idiot|dumb|loser|ugly|fat|moron|retard)\b/i,
-  /\b(kill\s*yourself|kys)\b/i,
-  /\b(die|hate)\s+(you|u|him|her|them)\b/i,
-  // Profanity — partial; regex matches root
-  /\b(fuck|shit|bitch|asshole|dick|pussy|cunt)\w*/i,
-  // Adult content tells
-  /\b(porn|sex\s*video|nude|xxx)\b/i,
-  // Hindi / transliteration (conservative)
-  /\b(madarchod|bhenchod|chutiya|bhosdi|gandu|randi|harami)\w*/i,
-  // Bengali transliteration
-  /\b(bara|magi|khanki|baler)\w*/i,
+// Two tiers of patterns:
+//
+//   HARD_PATTERNS — block on any match. Profanity, slurs, self-harm, adult
+//   content. These are unambiguous.
+//
+//   DIRECTED_INSULTS — soft words (stupid / dumb / ugly) that have legitimate
+//   uses ("I felt stupid today", "Don't be afraid of looking dumb"). Only
+//   block when paired with a target pronoun ("you are stupid", "she's dumb")
+//   so we don't punish honest self-reflection.
+const HARD_PATTERNS: RegExp[] = [
+  // Self-harm / threat
+  /\b(kill\s*yourself|kys|kill\s+(him|her|them)|die\s+(in\s+)?(a\s+)?(fire|hole))\b/i,
+  // English profanity (root-match)
+  /\b(fuck|shit|bitch|asshole|dick|pussy|cunt|whore|slut)\w*/i,
+  // Adult-content tells
+  /\b(porn|sex\s*video|nude|xxx|onlyfans)\b/i,
+  // Hindi transliteration — these are unambiguous slurs
+  /\b(madarchod|bhenchod|chutiya|bhosdi|gandu|randi|harami|saala\s+kutta)\w*/i,
+  // Bengali transliteration — same
+  /\b(magi|khanki|baler\s+chele)\w*/i,
 ];
+
+// Directed-insult: soft pejorative + second/third-person target word in close
+// proximity. Word boundary tolerant of common contractions ("you're", "u r").
+const DIRECTED_INSULT_PATTERNS: RegExp[] = [
+  /\b(you|u|she|he|they|him|her|them|y'?all)\s*(are|is|'re|r|'s)?\s*(an?\s+)?(stupid|idiot|dumb|loser|ugly|fat|moron|retard|jerk|pathetic|worthless)\b/i,
+  // Reverse order: "stupid you", "dumb idiots" addressed to a person
+  /\b(stupid|idiot|dumb|loser|moron|retard)\s+(you|kid|girl|boy|losers|idiots)\b/i,
+];
+
+const BLOCK_PATTERNS: RegExp[] = [...HARD_PATTERNS, ...DIRECTED_INSULT_PATTERNS];
 
 export interface SafetyVerdict {
   ok: boolean;

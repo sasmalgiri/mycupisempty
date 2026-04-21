@@ -46,11 +46,8 @@ export async function GET() {
       (memberships || []).map(async (m: any) => {
         const c = m.study_circles;
         if (!c) return null;
-        const [{ count: memberCount }, { data: challenge }] = await Promise.all([
-          supabase
-            .from('circle_members')
-            .select('user_id', { count: 'exact', head: true })
-            .eq('circle_id', c.id),
+        const [countRes, { data: challenge }] = await Promise.all([
+          supabase.rpc('get_circle_member_count', { p_circle_id: c.id }),
           supabase
             .from('circle_shared_challenges')
             .select('id, prompt, subject_hint, created_at')
@@ -58,6 +55,7 @@ export async function GET() {
             .eq('challenge_date', todayISO())
             .maybeSingle(),
         ]);
+        const memberCount = typeof countRes?.data === 'number' ? countRes.data : 0;
 
         let completionCount = 0;
         let completedByMe = false;
@@ -76,7 +74,7 @@ export async function GET() {
           inviteCode: c.invite_code,
           role: m.role,
           isFounder: c.created_by === user.id,
-          memberCount: memberCount || 0,
+          memberCount,
           maxMembers: c.max_members,
           todayChallenge: challenge
             ? {
@@ -146,12 +144,13 @@ export async function POST(req: Request) {
 
       if (!circle || !circle.is_active) return NextResponse.json({ error: 'Code not found' }, { status: 404 });
 
-      const { count: memberCount } = await supabase
-        .from('circle_members')
-        .select('user_id', { count: 'exact', head: true })
-        .eq('circle_id', circle.id);
+      // SECURITY DEFINER count — RLS would hide rows from a non-member, so a
+      // direct count() returns 0 and the size check would be bypassed.
+      const { data: countData } = await supabase
+        .rpc('get_circle_member_count', { p_circle_id: circle.id });
+      const memberCount = typeof countData === 'number' ? countData : 0;
 
-      if ((memberCount || 0) >= circle.max_members) {
+      if (memberCount >= circle.max_members) {
         return NextResponse.json({ error: 'Circle is full' }, { status: 409 });
       }
 

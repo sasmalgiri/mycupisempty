@@ -118,17 +118,29 @@ export async function POST(request: NextRequest) {
       if (signals.length > 0) await supabase.from('learner_signals').insert(signals);
     } catch {}
 
-    // Upsert learner_profile row so the profile is "active"
+    // Upsert learner_profile row so the profile is "active".
+    // IMPORTANT: merge into the existing baseline_profile JSONB instead of
+    // overwriting — other writers (notably /api/learning-mode) store
+    // learning_modes in this same column, and a blind upsert would wipe them.
     try {
+      const { data: existing } = await supabase
+        .from('learner_profiles')
+        .select('baseline_profile')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const merged = {
+        ...(existing?.baseline_profile || {}),
+        character_goal: characterGoal || null,
+        easiest_subject_declared: easiestSubject || null,
+        toughest_subject_declared: toughestSubject || null,
+        language: language || 'en',
+        onboarded_at: now,
+      };
+
       await supabase.from('learner_profiles').upsert({
         user_id: user.id,
-        baseline_profile: {
-          character_goal: characterGoal || null,
-          easiest_subject_declared: easiestSubject || null,
-          toughest_subject_declared: toughestSubject || null,
-          language: language || 'en',
-          onboarded_at: now,
-        },
+        baseline_profile: merged,
         updated_at: now,
       }, { onConflict: 'user_id' });
     } catch {}
