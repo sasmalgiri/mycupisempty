@@ -1,4 +1,6 @@
 import type { VARKStyle, BloomLevel } from '@/types';
+import type { StudentState } from './student-state';
+import { generateAIContext } from './student-state';
 
 // Grok (xAI) API configuration — OpenAI-compatible
 const XAI_API_KEY = process.env.XAI_API_KEY || '';
@@ -10,7 +12,9 @@ interface AITutorContext {
   classLevel: number;
   subject: string;
   topic: string;
+  subjectId?: string;
   previousMessages?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  studentState?: StudentState;
 }
 
 interface GenerateQuestionOptions {
@@ -53,9 +57,9 @@ CRITICAL SAFETY RULES — YOU MUST FOLLOW THESE AT ALL TIMES:
    - Class 10-12 (ages 15-18): Academic language appropriate for board exams
    NEVER use language or examples inappropriate for the student's age group.
 
-4. SYLLABUS BOUNDARIES: Keep answers within the student's class level and board curriculum.
+4. SYLLABUS BOUNDARIES: Keep answers within the student's class level and the topic set commonly taught at that level.
    - Do NOT teach concepts from higher classes
-   - Do NOT provide content that contradicts NCERT/board textbooks
+   - Stay consistent with mainstream, publicly available educational explanations of the concept — but frame as "general explanation", not "from the textbook"
 
 5. SAFE LANGUAGE: Responses must always be:
    - Free from profanity, slang, or inappropriate humor
@@ -63,6 +67,13 @@ CRITICAL SAFETY RULES — YOU MUST FOLLOW THESE AT ALL TIMES:
    - Culturally sensitive to Indian students
 
 6. AI DISCLAIMER: You are an AI assistant, NOT a certified teacher. For important decisions, advise students to consult teachers and parents.
+
+7. AFFILIATION & IP GUARDRAILS — CRITICAL:
+   - MyCupIsEmpty is INDEPENDENT. NEVER claim affiliation / endorsement / partnership with CBSE, CISCE, ICSE, WBBSE, NCERT, any state board, school, or university.
+   - If asked "is this official?": reply "No, MyCupIsEmpty is independent — we cover general educational concepts, not official board material."
+   - NEVER copy textbook passages, NCERT chapter text, or board exam papers verbatim. Always paraphrase in your own words.
+   - NEVER say "from the NCERT textbook" or "the official CBSE answer" — say "here's how this is commonly explained" or "a way to understand this".
+   - NEVER issue certificates or imply this counts as school credit.
 
 REFUSAL FORMAT: When declining a non-educational question, respond with:
 "I'm your study buddy and I can only help with school subjects and learning! Let's get back to studying. What would you like to learn about?"
@@ -124,8 +135,12 @@ async function xaiChatCompletion(
  * Simple generate (prompt → response) using chat completions
  */
 async function aiGenerate(prompt: string, options?: { temperature?: number; max_tokens?: number }): Promise<string> {
+  // Prompt contains instructions + legal guardrails — treat as system.
   return xaiChatCompletion(
-    [{ role: 'user', content: prompt }],
+    [
+      { role: 'system', content: prompt },
+      { role: 'user', content: 'Please respond now.' },
+    ],
     options,
   );
 }
@@ -150,22 +165,31 @@ export async function getAIExplanation(
   context: AITutorContext,
   userQuestion: string
 ): Promise<string> {
-  const systemPrompt = EDUCATION_GUARDRAIL + `
-You are an expert NCERT tutor for Class ${context.classLevel} ${context.subject}.
+  let systemPrompt = EDUCATION_GUARDRAIL + `
+You are an expert independent tutor for a Class ${context.classLevel} Indian student studying ${context.subject}.
 You are currently teaching the topic: "${context.topic}".
-Stay strictly within this topic and the Class ${context.classLevel} syllabus.
+Stay strictly within this topic and the general knowledge commonly taught at Class ${context.classLevel} level in Indian schools. You are NOT affiliated with any board; teach using general educational knowledge only.
+`;
 
-LEARNING STYLE ADAPTATION:
-${LEARNING_STYLE_PROMPTS[context.learningStyle]}
+  // === STUDENT INTELLIGENCE — use real state if available ===
+  if (context.studentState) {
+    systemPrompt += generateAIContext(context.studentState, context.subjectId);
+  } else {
+    // Fallback to VARK (only if no real state)
+    systemPrompt += `\nLEARNING STYLE ADAPTATION:\n${LEARNING_STYLE_PROMPTS[context.learningStyle]}\n`;
+  }
 
+  systemPrompt += `
 GUIDELINES:
 - Be encouraging, patient, and supportive
 - Use simple language appropriate for Class ${context.classLevel} students
 - Give step-by-step explanations
 - Include examples from Indian context when relevant
-- Use Hindi terms when helpful (with English translations)
+- Use Hindi/Bengali terms when helpful (with English translations)
 - Keep responses focused and not too long
 - Celebrate correct answers and gently guide through mistakes
+- If you detect a repeated mistake pattern, address it directly
+- If the student seems frustrated, lower complexity and encourage
 - If the student asks something outside ${context.subject} or their syllabus, gently redirect them
 
 Respond in a way that's engaging and easy to understand for a ${context.classLevel}th grade student.`;

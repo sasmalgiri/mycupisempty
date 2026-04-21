@@ -1,5 +1,9 @@
 import type { VARKStyle, BloomLevel } from '@/types';
 import type { GuruSessionType, LearningDNA } from '@/types/upgrade';
+import type { StudentState } from './student-state';
+import { generateAIContext, decideAdaptation } from './student-state';
+import type { Intervention } from './intervention-engine';
+import { pickInterventionForMoment, interventionToAIPrompt } from './intervention-engine';
 
 // Grok (xAI) API configuration — OpenAI-compatible
 const XAI_API_KEY = process.env.XAI_API_KEY || '';
@@ -32,7 +36,7 @@ CRITICAL SAFETY RULES — YOU MUST FOLLOW THESE AT ALL TIMES:
 
 3. SYLLABUS BOUNDARIES: Keep all answers within the student's class level and board curriculum.
    - Do NOT teach concepts from higher classes unless explicitly in "Beyond Curriculum" mode
-   - Do NOT provide content that contradicts the approved NCERT/board textbook framework
+   - Stay consistent with mainstream, publicly available educational explanations — but never claim your content is "from" any specific textbook or board
    - If a question is beyond scope, say: "This topic is covered in a higher class. Let's focus on what you're learning now!"
 
 4. SAFE LANGUAGE: Your responses must always be:
@@ -45,6 +49,14 @@ CRITICAL SAFETY RULES — YOU MUST FOLLOW THESE AT ALL TIMES:
 
 REFUSAL FORMAT: When declining a non-educational question, respond with:
 "I'm your study buddy and I can only help with school subjects and learning! 📚 Let's get back to [current subject/topic]. What would you like to learn about?"
+
+6. AFFILIATION & INTELLECTUAL PROPERTY GUARDRAILS — CRITICAL:
+   - MyCupIsEmpty is an INDEPENDENT platform. You must NEVER claim to be affiliated with, endorsed by, partnered with, or officially recognised by: CBSE, CISCE, ICSE, WBBSE, NCERT, any State Board of Education, any government ministry, any school, or any university.
+   - If the student asks "are you official?", "is this the real NCERT?", "does CBSE recognise this?" → reply honestly: "No — MyCupIsEmpty is an independent learning platform. We cover general educational concepts that match your school syllabus, but we are not affiliated with any board."
+   - NEVER reproduce copyrighted textbook content, NCERT chapter text, or board question papers verbatim. You may describe concepts, generate original examples, or paraphrase general knowledge — but never quote long passages from textbooks.
+   - NEVER claim your explanation is "from the NCERT book" or "the official CBSE answer". Frame everything as: "a way to think about this concept", "based on general educational knowledge", "here's how this idea is commonly explained".
+   - If the student uploads or pastes what looks like a textbook page or actual exam paper, help them understand the concept but do NOT copy the text back or treat it as canon.
+   - NEVER issue certificates, claim credits, or imply your lessons are accepted as school credit.
 `;
 
 // ============================================================================
@@ -210,8 +222,8 @@ const DIFFICULTY_PROMPTS: Record<number, string> = {
   2: 'Explain for a young child (age 7-8). Very simple language, lots of examples from daily life.',
   3: 'Explain for a Class 3-4 student. Simple but can use basic subject terms.',
   4: 'Explain for a Class 5-6 student. Can use standard textbook language.',
-  5: 'Explain at the standard NCERT level appropriate for the student\'s class.',
-  6: 'Explain with slightly more depth than NCERT. Include extra context and connections.',
+  5: 'Explain at the standard depth commonly expected for the student\'s class.',
+  6: 'Explain with slightly more depth than the standard class level. Include extra context and connections.',
   7: 'Explain at an advanced level. Include deeper analysis and cross-topic connections.',
   8: 'Explain at a competitive exam level (Olympiad/NTSE). Rigorous and detailed.',
   9: 'Explain at an undergraduate introductory level. Formal and comprehensive.',
@@ -231,18 +243,75 @@ interface UnstuckContext {
   misconceptions: string[];
 }
 
+export type TeachingMode = 'direct' | 'socratic' | 'teach_back';
+
 interface GuruContext {
   classLevel: number;
   subject: string;
   topic: string;
+  subjectId?: string;
   learningStyle?: VARKStyle;
   teachingMethod?: string;
   difficultyLevel?: number;
-  isSocratic?: boolean;
+  isSocratic?: boolean;             // legacy flag — still honored
+  mode?: TeachingMode;              // preferred: direct | socratic | teach_back
   isBeyondCurriculum?: boolean;
   previousMessages?: Array<{ role: 'user' | 'assistant'; content: string }>;
   unstuckContext?: UnstuckContext;
+  // The real intelligence — live student state
+  studentState?: StudentState;
+  // Auto-inject a targeted intervention this turn
+  injectIntervention?: boolean;
 }
+
+// ============================================================================
+// Teaching Mode prompts — THIS is what separates us from ChatGPT tutors
+// ============================================================================
+
+const SOCRATIC_MODE_PROMPT = `
+🎓 SOCRATIC MODE — the discovery path.
+
+You are NOT here to give answers. You are here to make the student DISCOVER the answer.
+
+Hard rules:
+1. Never state the final answer directly. Not even "the answer is X, but let me show you why."
+2. Every turn, ask ONE question that moves them one step closer.
+3. When they say "just tell me" — kindly refuse: "I will, but first try this question. It's the last one before the answer clicks."
+4. If they're wrong, don't say "wrong." Ask: "What made you pick that? Let's trace it."
+5. Celebrate their thinking, not their correctness. "Good — you noticed something important" beats "correct!"
+6. Each question should feel one inch harder than the last, not a leap.
+7. If they're clearly stuck for 3 turns, give a tiny hint (not the answer) and ask again.
+
+Shape of your reply: short context (1-2 sentences) + ONE question. That's it.
+You're a mirror, not a lecturer. Reflect their thinking back, sharper.
+`;
+
+const TEACH_BACK_MODE_PROMPT = `
+🧑‍🏫 TEACH-BACK MODE — the protégé effect.
+
+Role swap: the STUDENT is now the teacher. YOU are the curious-but-slightly-confused learner.
+
+Hard rules:
+1. Ask them to explain the concept in their own words.
+2. Play the role of a younger student who knows less. Ask clarifying questions.
+3. When their explanation has a gap, probe it: "Wait — why does that work? Can you give me an example?"
+4. If they make an error, don't correct it directly. Ask: "Can you show me a case where that happens?" Let the error surface.
+5. Express confusion naturally: "Hmm, I thought X, but you said Y. Which is right?"
+6. End with: "I think I get it now — can you give me one more example I can try?"
+
+The goal: the student discovers the depth of their own understanding by teaching it.
+Stay in character as the learner. Don't break the role-play to lecture.
+`;
+
+const DIRECT_MODE_GUIDELINES = `
+📘 DIRECT MODE — clear teaching.
+
+You explain. You show examples. You answer questions. But you ALSO:
+1. After explaining, immediately ask ONE comprehension question — don't just dump info.
+2. When the student answers, react specifically to THEIR words, not a generic "great!"
+3. If you spot a misconception in their phrasing, address it gently before moving on.
+4. End each response with a micro-action: "Try this", "Write this down", or "Say it back."
+`;
 
 async function xaiChatCompletion(
   messages: Array<{ role: string; content: string }>,
@@ -286,21 +355,42 @@ async function guruChat(
 }
 
 async function guruGenerate(prompt: string, temperature = 0.7): Promise<string> {
+  // Prompt carries instructions + guardrails — use system role.
   return xaiChatCompletion(
-    [{ role: 'user', content: prompt }],
+    [
+      { role: 'system', content: prompt },
+      { role: 'user', content: 'Please respond now.' },
+    ],
     { temperature, max_tokens: 1024 },
   );
 }
 
 /**
- * Enhanced AI Guru explanation with method + difficulty + Socratic mode
+ * Enhanced AI Guru explanation — driven by REAL student state, not just VARK labels.
+ *
+ * If StudentState is provided, the AI sees:
+ * - Current mood, frustration, confidence
+ * - Per-subject accuracy, trends, stalled topics
+ * - Active misconceptions and error patterns
+ * - Behavioral patterns (persistence, help-seeking)
+ * - Cognitive load and attention span
+ *
+ * The AI adapts difficulty, encouragement, and teaching style accordingly.
  */
 export async function getGuruExplanation(
   context: GuruContext,
   userMessage: string
 ): Promise<string> {
-  const difficulty = context.difficultyLevel || 5;
-  const method = context.teachingMethod || 'feynman';
+  // If we have real student state, use it to auto-adapt
+  let adaptedDifficulty = context.difficultyLevel || 5;
+  let adaptedMethod = context.teachingMethod || 'feynman';
+
+  if (context.studentState) {
+    const adaptation = decideAdaptation(context.studentState, context.subjectId);
+    // Use adapted values unless the user/teacher explicitly set them
+    if (!context.difficultyLevel) adaptedDifficulty = adaptation.difficulty;
+    if (!context.teachingMethod) adaptedMethod = adaptation.teachingMethod;
+  }
 
   let systemPrompt = EDUCATION_GUARDRAIL + `\nYou are an expert AI Guru and mentor. `;
 
@@ -310,15 +400,20 @@ export async function getGuruExplanation(
     systemPrompt += `You are teaching Class ${context.classLevel} ${context.subject}, topic: "${context.topic}". Stay strictly within this topic and the student's syllabus. `;
   }
 
-  // Difficulty
-  systemPrompt += `\n\nDIFFICULTY LEVEL (${difficulty}/10): ${DIFFICULTY_PROMPTS[difficulty]}\n`;
-
-  // Teaching method
-  if (TEACHING_METHOD_PROMPTS[method]) {
-    systemPrompt += `\nTEACHING METHOD — ${method.toUpperCase()}:\n${TEACHING_METHOD_PROMPTS[method]}\n`;
+  // === STUDENT INTELLIGENCE — the real brain ===
+  if (context.studentState) {
+    systemPrompt += generateAIContext(context.studentState, context.subjectId);
   }
 
-  // Unstuck context (enhanced Socratic support)
+  // Difficulty
+  systemPrompt += `\n\nDIFFICULTY LEVEL (${adaptedDifficulty}/10): ${DIFFICULTY_PROMPTS[adaptedDifficulty]}\n`;
+
+  // Teaching method
+  if (TEACHING_METHOD_PROMPTS[adaptedMethod]) {
+    systemPrompt += `\nTEACHING METHOD — ${adaptedMethod.toUpperCase()}:\n${TEACHING_METHOD_PROMPTS[adaptedMethod]}\n`;
+  }
+
+  // Unstuck context (enhanced with student state)
   if (context.unstuckContext) {
     const uc = context.unstuckContext;
     systemPrompt += `\nSTUDENT CONTEXT (from Unstuck button):
@@ -329,18 +424,38 @@ export async function getGuruExplanation(
 - Recent mistakes: ${uc.recentMistakes.length > 0 ? uc.recentMistakes.join(', ') : 'None recorded'}
 
 The student pressed the "I'm Stuck" button. They need help RIGHT NOW.
-Use the Socratic method — don't give answers directly. Ask guiding questions.
+${context.studentState?.frustrationLevel && context.studentState.frustrationLevel > 5
+  ? 'They are VERY frustrated. Be exceptionally gentle. Start with something they DO know.'
+  : 'Use the Socratic method — ask guiding questions.'
+}
 Start by acknowledging they're stuck, then ask what specific part is confusing.
 Be extra patient and encouraging.\n`;
   }
 
-  // Socratic override
-  if (context.isSocratic) {
-    systemPrompt += `\n🔴 SOCRATIC MODE ACTIVE: Do NOT give direct answers. Only ask guiding questions. Lead the student to discover the answer through dialogue. If they ask "just tell me", gently redirect with another question.\n`;
+  // === TEACHING MODE (direct / socratic / teach_back) ===
+  const mode: TeachingMode = context.mode || (context.isSocratic ? 'socratic' : 'direct');
+  if (mode === 'socratic') {
+    systemPrompt += SOCRATIC_MODE_PROMPT;
+  } else if (mode === 'teach_back') {
+    systemPrompt += TEACH_BACK_MODE_PROMPT;
+  } else {
+    systemPrompt += DIRECT_MODE_GUIDELINES;
   }
 
-  // Learning style
-  if (context.learningStyle) {
+  // === TARGETED INTERVENTION — attack a specific misconception ===
+  if (context.injectIntervention && context.studentState) {
+    const intervention = pickInterventionForMoment(
+      context.studentState,
+      context.unstuckContext ? 'guru_chat' : 'guru_chat',
+      context.subjectId,
+    );
+    if (intervention) {
+      systemPrompt += `\n${interventionToAIPrompt(intervention)}`;
+    }
+  }
+
+  // Fallback: Learning style (only if no student state)
+  if (!context.studentState && context.learningStyle) {
     const styleHints: Record<VARKStyle, string> = {
       visual: 'This student learns best through images, diagrams, and visual patterns.',
       auditory: 'This student learns best through listening, discussion, and verbal explanations.',
@@ -361,10 +476,12 @@ Be extra patient and encouraging.\n`;
 GUIDELINES:
 - Be warm, patient, and encouraging
 - Use Indian context and examples when relevant
-- Include Hindi terms when they add clarity
+- Include Hindi/Bengali terms when they add clarity
 - Every 4-5 exchanges, check the student's understanding
 - If the student seems confused, try a different approach automatically
-- NEVER use language or examples inappropriate for the student's age group`;
+- If the student is doing well, acknowledge it and push a little harder
+- NEVER use language or examples inappropriate for the student's age group
+- Watch for mistakes — if you see an error pattern repeating, ADDRESS IT directly`;
 
   const messages = [...(context.previousMessages || [])];
   messages.push({ role: 'user', content: userMessage });

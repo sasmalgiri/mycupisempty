@@ -2,7 +2,7 @@
   "name": "mycupisempty",
   "version": "1.0.0",
   "private": true,
-  "description": "AI-Powered Adaptive Learning Platform for NCERT Curriculum",
+  "description": "Independent AI-powered adaptive learning platform for Indian school students (Class 1-12). Not affiliated with any education board.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,9 +10,10 @@
     "lint": "next lint",
     "db:migrate": "supabase db push",
     "db:generate": "supabase gen types typescript --local > src/types/database.ts",
-    "scrape:ncert": "npx tsx scripts/ncert-scraper.ts",
     "seed": "npx tsx scripts/seed-database.ts",
-    "seed:wb5": "npx tsx scripts/seed-wb-class5.ts"
+    "seed:wb5": "npx tsx scripts/seed-wb-class5.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",

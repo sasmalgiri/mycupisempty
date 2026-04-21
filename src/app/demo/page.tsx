@@ -340,7 +340,7 @@ function AITutorDemo() {
         </div>
       </div>
       <p className="mt-4 text-sm text-gray-500 text-center">
-        Sign up to chat with our AI tutor about any topic in the NCERT curriculum!
+        Sign up to chat with our AI tutor about any topic from your school syllabus!
       </p>
     </div>
   );

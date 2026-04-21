@@ -1,8 +1,9 @@
 import Link from 'next/link';
+import LegalDisclaimer from '@/components/LegalDisclaimer';
 
 export const metadata = {
   title: 'About | MyCupIsEmpty',
-  description: 'Learn about MyCupIsEmpty - the AI-powered adaptive learning platform for NCERT curriculum',
+  description: 'MyCupIsEmpty is an independent adaptive-learning platform for Indian school students. Not affiliated with CBSE, ICSE, WBBSE, NCERT or any education board.',
 };
 
 export default function AboutPage() {
@@ -65,8 +66,7 @@ export default function AboutPage() {
                 experiences for every student.
               </p>
               <p className="text-gray-600">
-                Our platform covers the complete NCERT curriculum from Classes 1-12, ensuring every
-                Indian student has access to quality, adaptive education.
+                Our platform covers general educational concepts from the standard Indian school curriculum for Classes 1–12, aligned with the topic lists published by various boards. MyCupIsEmpty is independent and not affiliated with any board — see the Legal Notice below.
               </p>
             </div>
             <div className="bg-gradient-to-br from-primary-100 to-secondary-100 rounded-3xl p-8">
@@ -135,8 +135,9 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-extrabold mb-6">Built for Indian Students</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-            MyCupIsEmpty is designed specifically for the NCERT curriculum, supporting
-            both English and Hindi languages, making quality education accessible to all.
+            MyCupIsEmpty is designed for Indian students who study the common topics
+            covered across Indian school syllabi. Supports English, Hindi, and Bengali —
+            making quality education accessible to all.
           </p>
           <div className="flex justify-center gap-8 flex-wrap">
             <div className="text-center">
@@ -149,7 +150,7 @@ export default function AboutPage() {
             </div>
             <div className="text-center">
               <div className="text-4xl font-extrabold gradient-text">100%</div>
-              <div className="text-gray-500">NCERT Aligned</div>
+              <div className="text-gray-500">Topics Covered</div>
             </div>
             <div className="text-center">
               <div className="text-4xl font-extrabold gradient-text">24/7</div>
@@ -175,11 +176,26 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* Legal Notice — must appear before the marketing footer */}
+      <section className="py-10 bg-amber-50 border-y border-amber-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-bold mb-3">Legal Notice — Independent Platform</h2>
+          <LegalDisclaimer />
+          <div className="mt-4 text-xs text-gray-600 flex gap-4">
+            <Link href="/terms" className="underline">Terms of Service</Link>
+            <Link href="/privacy" className="underline">Privacy Policy</Link>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-2">
           <p className="text-gray-400">
             Made with love for Indian students.
+          </p>
+          <p className="text-[11px] text-gray-500">
+            MyCupIsEmpty is an independent educational platform — not affiliated with CBSE, CISCE/ICSE, WBBSE, NCERT or any education board.
           </p>
         </div>
       </footer>

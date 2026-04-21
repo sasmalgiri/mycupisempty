@@ -80,8 +80,8 @@ CREATE TABLE public.subjects (
     icon TEXT, -- emoji or icon name
     color TEXT, -- hex color
     description TEXT,
-    book_title TEXT, -- NCERT book title
-    book_code TEXT, -- NCERT book code for API
+    book_title TEXT, -- generic textbook title reference (metadata only)
+    book_code TEXT, -- textbook code identifier (metadata only)
     total_chapters INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -113,7 +113,7 @@ CREATE TABLE public.topics (
     topic_number INTEGER NOT NULL,
     title TEXT NOT NULL,
     title_hindi TEXT,
-    content_text TEXT, -- Main content from NCERT
+    content_text TEXT, -- AI-generated / originally-authored explanation (not reproduced from any textbook)
     content_html TEXT, -- Formatted content
     bloom_levels JSONB, -- {"remember": true, "understand": true, etc}
     key_concepts JSONB, -- Array of key terms

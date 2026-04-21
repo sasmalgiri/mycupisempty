@@ -53,6 +53,9 @@
   ],
   "exclude": [
     "node_modules",
-    "supabase"
+    "supabase",
+    "vitest.config.ts",
+    "src/**/__tests__/**",
+    "src/**/*.test.ts"
   ]
 }

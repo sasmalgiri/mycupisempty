@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { ollamaAI } from '@/lib/ollama';
+import { buildStudentState } from '@/lib/student-state';
 import type { VARKStyle } from '@/types';
 
 // Server-side content filter — blocks obviously non-educational queries
@@ -83,7 +84,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get AI response
+    // Build live student state — AI sees the REAL student
+    let studentState;
+    try {
+      studentState = await buildStudentState(supabase, user.id);
+    } catch {
+      studentState = undefined;
+    }
+
+    // Get AI response — now informed by real student state
     const aiResponse = await ollamaAI.getExplanation(
       {
         learningStyle: userLearningStyle,
@@ -91,6 +100,7 @@ export async function POST(request: NextRequest) {
         subject: subject || 'General',
         topic: topic || topicContext || 'General Knowledge',
         previousMessages,
+        studentState,
       },
       message
     );
@@ -110,6 +120,30 @@ export async function POST(request: NextRequest) {
           content: aiResponse,
         },
       ]);
+    }
+
+    // Silently collect learner signal — tracks every AI interaction
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('learner_signals') as any).insert({
+        user_id: user.id,
+        signal_type: 'ai_chat_interaction',
+        category: 'engagement',
+        source: 'ai_chat',
+        subject_id: subject || null,
+        value: message.length / 200,  // normalize by typical message length
+        metadata: {
+          subject,
+          topic: topic || topicContext,
+          class_level: classLevel,
+          message_length: message.length,
+          response_length: aiResponse.length,
+          was_blocked: false,
+        },
+        created_at: new Date().toISOString(),
+      });
+    } catch {
+      // Table might not exist yet — silently ignore
     }
 
     return NextResponse.json({

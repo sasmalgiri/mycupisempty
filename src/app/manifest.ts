@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'MyCupIsEmpty - AI-Powered Adaptive Learning',
     short_name: 'MyCupIsEmpty',
-    description: 'Personalized education using 20+ ancient & modern learning methods. AI Guru, NCERT curriculum, character building for Class 1-12.',
+    description: 'Independent adaptive learning for Indian school students (Class 1–12). 20+ teaching methods, AI tutor, virtual labs, character building. Not affiliated with any education board.',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

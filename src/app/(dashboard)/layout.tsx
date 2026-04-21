@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase';
 import UnstuckButton from '@/components/UnstuckButton';
+import LegalDisclaimer from '@/components/LegalDisclaimer';
+import { flushSignals } from '@/lib/learner-engine';
 
 const navItems = [
   { href: '/dashboard', icon: '🏠', label: 'Dashboard' },
@@ -47,6 +49,19 @@ export default function DashboardLayout({
     xp: 0,
     streak: 0,
   });
+
+  // Flush learner signals on page unload — don't lose data
+  useEffect(() => {
+    const handleUnload = () => { flushSignals(); };
+    window.addEventListener('beforeunload', handleUnload);
+    // Also flush periodically (every 2 min)
+    const interval = setInterval(() => { flushSignals(); }, 120000);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      clearInterval(interval);
+      flushSignals();
+    };
+  }, []);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -211,6 +226,19 @@ export default function DashboardLayout({
 
         {/* Unstuck floating button — appears on all student pages */}
         <UnstuckButton />
+
+        {/* Legal footer — mandatory on every page */}
+        <footer className="mt-16 border-t border-gray-200 bg-white/60 backdrop-blur-sm px-4 sm:px-6 lg:px-8 py-6">
+          <div className="max-w-7xl mx-auto space-y-3">
+            <LegalDisclaimer compact />
+            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+              <Link href="/about" className="hover:text-primary-600">About</Link>
+              <Link href="/terms" className="hover:text-primary-600">Terms</Link>
+              <Link href="/privacy" className="hover:text-primary-600">Privacy</Link>
+              <span className="ml-auto">© {new Date().getFullYear()} MyCupIsEmpty</span>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );

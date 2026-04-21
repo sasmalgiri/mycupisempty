@@ -396,37 +396,6 @@ export interface OllamaResponse {
   eval_duration?: number;
 }
 
-// Curriculum Data Types (for scraper)
-export interface NCERTCurriculum {
-  classes: NCERTClass[];
-}
-
-export interface NCERTClass {
-  classNumber: number;
-  subjects: NCERTSubject[];
-}
-
-export interface NCERTSubject {
-  name: string;
-  nameHindi: string;
-  code: string;
-  icon: string;
-  color: string;
-  bookTitle: string;
-  bookCode: string;
-  chapters: NCERTChapter[];
-}
-
-export interface NCERTChapter {
-  chapterNumber: number;
-  title: string;
-  titleHindi?: string;
-  pdfUrl?: string;
-  topics: NCERTTopic[];
-}
-
-export interface NCERTTopic {
-  topicNumber: number;
-  title: string;
-  titleHindi?: string;
-}
+// Dead code removed: NCERT* curriculum interfaces were orphaned after the
+// scraper was deleted. Nothing imports them. Leaving this note in case
+// anyone searches for the old names.

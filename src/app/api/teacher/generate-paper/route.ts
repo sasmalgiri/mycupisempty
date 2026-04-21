@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { IP_AFFILIATION_RULES } from '@/lib/legal-prompts';
 
 // Grok (xAI) API configuration
 const XAI_API_KEY = process.env.XAI_API_KEY || '';
@@ -43,7 +44,9 @@ async function generateQuestionsWithAI(
   existingTopics: string[]
 ): Promise<any[]> {
   try {
-    const prompt = `Generate ${neededCount} exam questions in JSON format for a Class ${criteria.class_level} student.
+    const prompt = `${IP_AFFILIATION_RULES}
+
+Generate ${neededCount} ORIGINAL exam questions (never reproduce questions from any existing textbook, question paper, or board exam — write fresh questions using general educational knowledge) in JSON format for a Class ${criteria.class_level} student.
 Topics: ${existingTopics.join(', ')}
 Total marks needed: ${criteria.total_marks}
 Difficulty distribution: Easy ${criteria.difficulty_distribution.easy}%, Medium ${criteria.difficulty_distribution.medium}%, Hard ${criteria.difficulty_distribution.hard}%
@@ -71,7 +74,10 @@ Return ONLY the JSON array, no other text.`;
       },
       body: JSON.stringify({
         model: XAI_MODEL,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'system', content: prompt },
+          { role: 'user', content: 'Please generate the exam questions now.' },
+        ],
         temperature: 0.7,
         max_tokens: 2048,
       }),

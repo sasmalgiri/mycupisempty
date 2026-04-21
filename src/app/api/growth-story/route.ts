@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { IP_AFFILIATION_RULES } from '@/lib/legal-prompts';
 
 // Grok (xAI) API configuration
 const XAI_API_KEY = process.env.XAI_API_KEY || '';
@@ -202,7 +203,9 @@ export async function POST(request: NextRequest) {
       on_demand: 'a growth summary',
     };
 
-    const prompt = `You are a warm, encouraging educational storyteller. Write ${storyTypeLabels[resolvedStoryType] || 'a growth narrative'} for a student.
+    const prompt = `${IP_AFFILIATION_RULES}
+
+You are a warm, encouraging educational storyteller. Write ${storyTypeLabels[resolvedStoryType] || 'a growth narrative'} for a student.
 
 STUDENT PROFILE:
 - Name: ${studentName}
@@ -260,7 +263,10 @@ Write the growth story now:`;
         },
         body: JSON.stringify({
           model: XAI_MODEL,
-          messages: [{ role: 'user', content: prompt }],
+          messages: [
+            { role: 'system', content: prompt },
+            { role: 'user', content: 'Please write the growth story now.' },
+          ],
           temperature: 0.8,
           max_tokens: 1024,
         }),

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getGuruExplanation, assessUnderstanding } from '@/lib/ollama-guru';
+import { buildStudentState } from '@/lib/student-state';
 import type { VARKStyle } from '@/types';
 
 // Server-side content filter — blocks obviously non-educational queries
@@ -38,6 +39,8 @@ export async function POST(request: NextRequest) {
       difficulty_level = 5,
       is_socratic = false,
       is_beyond_curriculum = false,
+      mode,                    // 'direct' | 'socratic' | 'teach_back'
+      inject_intervention = false,  // attack a misconception this turn
     } = body;
 
     if (!message) {
@@ -119,18 +122,42 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get AI response
+    // Build live student state — the AI will see the REAL student
+    let studentState;
+    try {
+      studentState = await buildStudentState(supabase, user.id);
+    } catch {
+      // If state building fails, continue without it
+      studentState = undefined;
+    }
+
+    // Get subject ID from topic
+    let subject_id: string | undefined;
+    if (topic_id) {
+      const { data: topicData } = await supabase
+        .from('topics')
+        .select('chapter:chapters(subject_id)')
+        .eq('id', topic_id)
+        .single();
+      subject_id = (topicData as any)?.chapter?.subject_id;
+    }
+
+    // Get AI response — now informed by real student state
     const reply = await getGuruExplanation(
       {
         classLevel: profile?.current_class || 8,
         subject: subjectName,
         topic: topicName,
+        subjectId: subject_id,
         learningStyle: (learningStyle?.dominant_style as VARKStyle) || 'visual',
         teachingMethod: teaching_method,
         difficultyLevel: difficulty_level,
         isSocratic: is_socratic,
+        mode,
+        injectIntervention: inject_intervention,
         isBeyondCurriculum: is_beyond_curriculum,
         previousMessages,
+        studentState,
       },
       message
     );
@@ -163,6 +190,32 @@ export async function POST(request: NextRequest) {
       } catch {
         // Checkpoint generation is optional
       }
+    }
+
+    // Silently collect learner signal — every guru interaction
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('learner_signals') as any).insert({
+        user_id: user.id,
+        signal_type: 'ai_guru_interaction',
+        category: 'engagement',
+        source: 'ai_guru',
+        subject_id: subject_id || null,
+        value: message.length / 200,
+        metadata: {
+          subject: subjectName,
+          topic: topicName,
+          teaching_method,
+          difficulty_level,
+          is_socratic,
+          is_beyond_curriculum,
+          message_count: previousMessages.length,
+          has_checkpoint: !!checkpoint,
+        },
+        created_at: new Date().toISOString(),
+      });
+    } catch {
+      // Table might not exist yet — silently ignore
     }
 
     return NextResponse.json({

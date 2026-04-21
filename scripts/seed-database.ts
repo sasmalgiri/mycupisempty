@@ -2,11 +2,16 @@
  * Database Seeding Script for MyCupIsEmpty
  * 
  * This script populates the Supabase database with:
- * 1. NCERT curriculum structure (Classes 1-12)
+ * 1. Generic Indian school curriculum structure (Classes 1-12) — topic metadata only,
+ *    no copyrighted textbook content. Subject and chapter names are facts (not
+ *    copyrightable).
  * 2. Subjects and chapters
- * 3. Sample topics and content
- * 4. Question bank with Bloom's taxonomy levels
+ * 3. Sample AI-generated topics
+ * 4. Question bank with Bloom's taxonomy levels (all originally authored)
  * 5. Achievements and gamification data
+ *
+ * Note: MyCupIsEmpty is independent and not affiliated with any education board.
+ * We never reproduce textbook content verbatim.
  * 
  * Usage: npm run seed
  */

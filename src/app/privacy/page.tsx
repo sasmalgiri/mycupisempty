@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import LegalDisclaimer from '@/components/LegalDisclaimer';
 
 export default function PrivacyPage() {
   return (
@@ -72,6 +73,11 @@ export default function PrivacyPage() {
               <p className="text-gray-600 leading-relaxed">
                 For privacy-related questions or concerns, please reach out through the platform&apos;s support channels. We take your privacy seriously and will respond to all inquiries promptly.
               </p>
+            </section>
+
+            <section className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <h2 className="text-lg font-semibold mb-2">Independent Platform</h2>
+              <LegalDisclaimer />
             </section>
           </div>
         </div>

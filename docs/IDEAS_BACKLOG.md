@@ -134,7 +134,7 @@
 ### 3.1 Interactive Problem Solving (Brilliant.org)
 **What**: Every lesson requires active engagement — drag, calculate, predict, then see results. No passive videos. Guided discovery: gives just enough context, then lets students figure out principles.
 **Why it works**: Constructivism (Piaget) — students build understanding through active manipulation. Productive Struggle creates deeper, more durable learning. Brilliant's approach is the gold standard for cognitive development.
-**Fits**: THE best model for our Cognitive pillar. Build interactive NCERT concept explorers, not lecture videos.
+**Fits**: THE best model for our Cognitive pillar. Build interactive concept explorers for general school topics, not lecture videos.
 **Priority**: P0
 **Effort**: High per module — but even 5-10 interactive lessons would differentiate us.
 
@@ -167,7 +167,7 @@
 **Effort**: Low-Medium — Web Speech API → Ollama → text-to-speech.
 
 ### 3.6 Animated Concept Explainers (Byju's style)
-**What**: High-quality animated walkthroughs of difficult NCERT concepts. Real-world visual analogies. Not a teacher talking — actual visual storytelling.
+**What**: High-quality animated walkthroughs of difficult school-level concepts. Real-world visual analogies. Not a teacher talking — actual visual storytelling.
 **Why it works**: Dual Coding Theory (Paivio) — visual + verbal information processed through separate channels, doubling retention. Byju's entire $22B valuation was built on this.
 **Fits**: Academic. Science + Math priority subjects.
 **Priority**: P1

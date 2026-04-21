@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline — MyCupIsEmpty</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #f5f3ff 0%, #fdf4ff 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      color: #1f2937;
+    }
+    .card {
+      max-width: 420px;
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .emoji { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.5rem; margin: 0 0 0.5rem 0; }
+    p { color: #4b5563; line-height: 1.5; margin: 0 0 1.5rem 0; }
+    .hint { font-size: 0.875rem; color: #6b7280; }
+    .retry {
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .retry:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="emoji">📶</div>
+    <h1>You're offline</h1>
+    <p>No internet right now — but your cup keeps filling.</p>
+    <p class="hint">Cached daily mix and flashcards still work. Reconnect to sync your progress.</p>
+    <button class="retry" onclick="location.reload()">Try again</button>
+  </div>
+</body>
+</html>

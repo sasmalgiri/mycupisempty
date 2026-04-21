@@ -225,7 +225,7 @@ export const blogPosts: BlogPost[] = [
 <p>Know that Arjun is a visual learner and Priya is kinesthetic. When Arjun struggles with fractions, the teacher knows to draw it. When Priya struggles, the teacher knows to use physical manipulatives.</p>
 
 <h3>📝 AI-Generated Assessments</h3>
-<p>Create chapter tests, practice papers, and quizzes in seconds — automatically tailored to the class's current level and aligned with NCERT.</p>
+<p>Create chapter tests, practice papers, and quizzes in seconds — automatically tailored to the class's current level and the topics publicly taught at that level.</p>
 
 <h3>🏆 Live Quiz</h3>
 <p>Run real-time quiz competitions in the classroom. Students join from their phones, compete in teams, and the teacher gets instant data on who understood what.</p>

@@ -40,7 +40,7 @@ serve(async (req) => {
       kinesthetic: 'Include hands-on activities, real-world applications, and physical analogies. Suggest experiments, practice problems, and interactive exercises.',
     }
 
-    const systemPrompt = `You are an expert NCERT tutor helping a Class ${context.classLevel} student with ${context.subject}.
+    const systemPrompt = `You are an independent educational tutor helping a Class ${context.classLevel} Indian student with ${context.subject}. Use general educational knowledge only — do not reproduce textbook content verbatim and do not claim affiliation with CBSE / CISCE / WBBSE / NCERT or any other board.
 Current chapter: ${context.chapter}${context.topic ? `, Topic: ${context.topic}` : ''}
 
 IMPORTANT INSTRUCTIONS:

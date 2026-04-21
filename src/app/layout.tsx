@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Nunito, Crimson_Pro, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
 import BuddyAssistant from '@/components/BuddyAssistant';
+import PWAInstaller from '@/components/PWAInstaller';
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://mycupisempty.com';
 
@@ -29,8 +30,8 @@ export const metadata: Metadata = {
     default: 'MyCupIsEmpty - AI-Powered Adaptive Learning Platform for Indian Students',
     template: '%s | MyCupIsEmpty',
   },
-  description: 'Personalized education for CBSE, ICSE, West Bengal Board (WBBSE) & State Boards. Class 1-12 with 20+ teaching methods. AI Guru adapts to your VARK learning style. Free for students.',
-  keywords: ['NCERT learning app', 'CBSE online tutor', 'ICSE study platform', 'West Bengal Board WBBSE', 'WBBSE learning app', 'state board education', 'AI tutor India', 'adaptive learning', 'Vedic Math', 'Gurukul method', 'VARK learning style', 'Class 1-12 education', 'personalized learning', 'free education app India', 'Feynman technique', 'spaced repetition', 'interactive learning games'],
+  description: 'Personalised, adaptive learning for Indian school students (Class 1–12). Covers general educational concepts aligned with publicly available CBSE / ICSE / WBBSE / State Board syllabi. Independent platform — not affiliated with any board.',
+  keywords: ['Indian school learning app', 'adaptive learning', 'Class 1-12 education', 'personalised learning', 'Vedic Math', 'Gurukul method', 'VARK learning style', 'AI tutor India', 'Feynman technique', 'spaced repetition', 'interactive learning games', 'general educational content', 'independent education platform'],
   authors: [{ name: 'MyCupIsEmpty', url: BASE_URL }],
   creator: 'MyCupIsEmpty',
   publisher: 'MyCupIsEmpty',
@@ -47,7 +48,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'MyCupIsEmpty - AI-Powered Adaptive Learning for Indian Students',
-    description: 'Learn CBSE, ICSE, WBBSE & State Board curriculum with AI that adapts to YOUR learning style. 20+ teaching methods. Free for Class 1-12.',
+    description: 'Adaptive learning for Indian school students — general educational concepts aligned with publicly available school syllabi. Independent platform; not affiliated with any board.',
     url: BASE_URL,
     siteName: 'MyCupIsEmpty',
     type: 'website',
@@ -64,7 +65,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'MyCupIsEmpty - AI-Powered Adaptive Learning',
-    description: 'Personalized NCERT education for Class 1-12. AI Guru with 20+ teaching methods adapts to your learning style.',
+    description: 'Personalised learning for Class 1–12. Covers general educational concepts from publicly available school syllabi. Independent; not affiliated with any board.',
     images: ['/assets/og-image.png'],
   },
   alternates: {
@@ -78,7 +79,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebApplication',
   name: 'MyCupIsEmpty',
-  description: 'AI-powered adaptive learning platform for Indian students. NCERT curriculum with 20+ teaching methods personalized to each student\'s learning style.',
+  description: 'AI-powered adaptive learning for Indian students. General educational content aligned with publicly available school syllabi. Independent platform — not affiliated with any education board.',
   url: BASE_URL,
   applicationCategory: 'EducationalApplication',
   operatingSystem: 'Web',
@@ -96,7 +97,7 @@ const jsonLd = {
   educationalAlignment: {
     '@type': 'AlignmentObject',
     alignmentType: 'educationalFramework',
-    educationalFramework: 'CBSE/ICSE/WBBSE/State Boards',
+    educationalFramework: 'Publicly available Indian school syllabi (aligned to standard Class 1-12 curriculum frameworks)',
     targetName: 'Class 1-12 Multi-Board Curriculum',
   },
   featureList: [
@@ -126,6 +127,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         {children}
         <BuddyAssistant />
+        <PWAInstaller />
       </body>
     </html>
   );

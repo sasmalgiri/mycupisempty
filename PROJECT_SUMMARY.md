@@ -2,7 +2,7 @@
 
 ## 🎯 Project Status: COMPLETE ✅
 
-A production-ready educational platform for NCERT curriculum (Classes 1-12) with AI tutoring, gamification, and personalized learning based on VARK learning styles.
+A production-ready independent educational platform for Indian school students (Classes 1–12) with AI tutoring, gamification, virtual labs, and personalised learning. Covers general educational topics commonly taught in Indian schools. Not affiliated with CBSE / CISCE / WBBSE / NCERT or any education board.
 
 ---
 
@@ -15,8 +15,7 @@ mycupisempty/
 ├── public/
 │   └── assets/                # Static assets
 ├── scripts/
-│   ├── ncert-scraper.ts       # NCERT content scraper
-│   └── seed-database.ts       # Database seeding script
+│   └── seed-database.ts       # Database seeding script (topic metadata only, no textbook content)
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/            # Authentication pages
@@ -75,7 +74,7 @@ mycupisempty/
 ### Core Features
 - ✅ **VARK Learning Style Assessment** - Visual, Auditory, Reading/Writing, Kinesthetic
 - ✅ **AI Tutor Chat** - Context-aware, learning style adapted responses
-- ✅ **Complete NCERT Curriculum** - Classes 1-12, all subjects
+- ✅ **Complete Indian School Subject Coverage** - Classes 1–12, all major subjects (general educational topics)
 - ✅ **Interactive Quizzes** - Bloom's taxonomy levels, instant feedback
 - ✅ **Flashcard System** - Spaced repetition algorithm
 - ✅ **Progress Tracking** - XP, levels, streaks, analytics
@@ -225,11 +224,8 @@ npm run dev
 # Build for production
 npm run build
 
-# Seed database with initial data
+# Seed database with initial data (topic metadata only)
 npm run seed
-
-# Scrape NCERT content (requires network)
-npm run scrape
 ```
 
 ---

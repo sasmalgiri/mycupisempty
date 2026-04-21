@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import LegalDisclaimer from '@/components/LegalDisclaimer';
 
 export default function TermsPage() {
   return (
@@ -18,10 +19,15 @@ export default function TermsPage() {
           <p className="text-gray-500 text-sm mb-8">Last updated: March 2026</p>
 
           <div className="prose prose-gray max-w-none space-y-6">
+            <section className="p-4 bg-amber-50 border-l-4 border-amber-400 rounded-lg">
+              <h2 className="text-lg font-bold mb-2">Important Notice — Independent Platform</h2>
+              <LegalDisclaimer />
+            </section>
+
             <section>
               <h2 className="text-xl font-semibold mb-3">1. Acceptance of Terms</h2>
               <p className="text-gray-600 leading-relaxed">
-                By accessing and using MyCupIsEmpty, you accept and agree to be bound by these Terms of Service. This platform is designed for educational purposes, helping students learn through personalized AI-powered tutoring aligned with the NCERT curriculum.
+                By accessing and using MyCupIsEmpty, you accept and agree to be bound by these Terms of Service. This platform is designed for educational purposes, helping students learn general educational concepts through personalised AI-powered tutoring. Topic sequencing may be ordered according to publicly available school syllabus frameworks chosen by the student, but MyCupIsEmpty is an <strong>independent</strong> platform and is <strong>not affiliated with, endorsed by, or officially recognised</strong> by CBSE, CISCE/ICSE, WBBSE, NCERT, any State Board, any university, or any school.
               </p>
             </section>
 
@@ -40,9 +46,9 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-3">4. Content & Intellectual Property</h2>
+              <h2 className="text-xl font-semibold mb-3">4. Content &amp; Intellectual Property</h2>
               <p className="text-gray-600 leading-relaxed">
-                All explanations and learning content on this platform are AI-generated and original. Our curriculum structure is aligned with the NCERT/CBSE framework for educational reference only. NCERT, CBSE, and ICSE are trademarks of their respective organizations — MyCupIsEmpty is not affiliated with or endorsed by them. AI-generated content is provided as a supplementary learning aid and should not replace formal education or official textbooks.
+                All explanations, practice problems, assignments, and learning content generated on this platform are AI-generated and original. We do <strong>not</strong> reproduce, republish, or distribute any proprietary textbook content, question papers, or examination material belonging to any education board or publisher. Syllabus alignment refers only to topic sequencing based on publicly available curriculum frameworks. &quot;CBSE&quot;, &quot;CISCE&quot;, &quot;ICSE&quot;, &quot;WBBSE&quot;, &quot;NCERT&quot; and any state board names are trademarks of their respective owners; our use is strictly nominative and does <strong>not</strong> claim affiliation, endorsement, or partnership. AI-generated content is a supplementary learning aid and does not replace formal education, prescribed textbooks, or official examinations.
               </p>
             </section>
 

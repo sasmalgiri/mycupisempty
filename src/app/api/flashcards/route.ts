@@ -146,6 +146,21 @@ export async function POST(request: NextRequest) {
           last_review_date: new Date().toISOString().split('T')[0],
         }, { onConflict: 'user_id,flashcard_id' });
 
+      // Silently track flashcard performance signal
+      try {
+        await supabase.from('learner_signals').insert({
+          user_id: user.id,
+          signal_type: 'flashcard_review',
+          category: 'performance',
+          source: 'flashcard',
+          value: quality >= 3 ? 1 : 0,  // binary: recalled or not
+          metadata: { quality, flashcard_id, interval, ease_factor: newEF, repetitions: newReps },
+          created_at: new Date().toISOString(),
+        });
+      } catch {
+        // Table might not exist
+      }
+
       return NextResponse.json({ success: true, interval, newEF, repetitions: newReps });
     }
 

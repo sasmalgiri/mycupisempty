@@ -1,6 +1,6 @@
 # 🧠 MyCupIsEmpty - AI-Powered Adaptive Learning Platform
 
-An AI-powered, personalized learning platform for NCERT curriculum (Classes 1-12) that adapts to each student's unique learning style using 15+ scientific learning methods.
+An independent AI-powered, personalized learning platform for Indian school students (Classes 1–12). Covers general educational topics commonly taught across Indian school syllabi, adapts to each student's unique learning style, and uses 20+ scientific teaching methods. **Not affiliated with CBSE, CISCE/ICSE, WBBSE, NCERT, or any education board.**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black)
@@ -14,11 +14,11 @@ An AI-powered, personalized learning platform for NCERT curriculum (Classes 1-12
 - **Adaptive Content**: Content automatically adapts to your learning style
 - **Multiple Intelligences**: Track and develop all 8 of Gardner's intelligences
 
-### 📚 Complete NCERT Curriculum
-- Classes 1-12 coverage
-- All major subjects (Math, Science, English, Hindi, Social Science, etc.)
-- Aligned with latest NCERT syllabus (2024-25)
-- Chapter-wise content with topics, definitions, and formulas
+### 📚 Complete Indian School Subject Coverage
+- Classes 1–12 coverage of topics commonly taught in Indian schools
+- All major subjects (Math, Science, English, Hindi, Bengali, Social Science, Computer Science, etc.)
+- Topic sequencing follows publicly available curriculum frameworks (student selects their board; we only use this for topic ordering)
+- Chapter-wise original content with topics, definitions, and formulas — all AI-generated or paraphrased; no verbatim textbook reproduction
 
 ### 🤖 AI Tutor (Powered by Ollama)
 - Ask questions in your preferred learning style
@@ -67,8 +67,6 @@ mycupisempty/
 │   ├── hooks/                 # Custom React hooks
 │   ├── types/                 # TypeScript types
 │   └── styles/               # Global CSS
-├── scripts/
-│   └── ncert-scraper.ts      # NCERT content scraper
 ├── supabase/
 │   └── migrations/           # Database schema
 ├── public/                   # Static assets
@@ -158,14 +156,22 @@ npm i -g vercel
 vercel --prod
 ```
 
-## 📖 NCERT Content Legal Notice
+## 📖 Legal Notice — Independent Platform
 
-NCERT textbooks are published by the Government of India's National Council of Educational Research and Training. They are:
-- Freely available at [ncert.nic.in](https://ncert.nic.in/textbook.php)
-- Intended for educational purposes
-- Not under traditional commercial copyright
+MyCupIsEmpty is an **independent** educational platform. It is **not** affiliated with, endorsed by, sponsored by, partnered with, or officially recognised by:
 
-This platform uses NCERT content for educational purposes with proper attribution.
+- CBSE (Central Board of Secondary Education)
+- CISCE / ICSE (Council for the Indian School Certificate Examinations)
+- WBBSE (West Bengal Board of Secondary Education)
+- NCERT (National Council of Educational Research and Training)
+- Any State Board of Education
+- Any school, university, or government ministry
+
+**What we offer**: general educational knowledge on topics that are publicly taught across Indian school syllabi. All explanations, practice problems, flashcards, assignments, and examples are **AI-generated and original** — we do **not** reproduce, republish, or distribute verbatim any proprietary textbook content, question papers, or examination material belonging to any board or publisher.
+
+When a student selects a board (e.g. CBSE / ICSE / WBBSE) during onboarding, we use that only to order topics according to what is publicly known to be taught in that class and board. Board names are trademarks of their respective owners; our use is strictly nominative.
+
+AI-generated content is a supplementary learning aid and does **not** replace school, teachers, official textbooks, or formal assessment.
 
 ## 🤖 AI Features
 
@@ -228,10 +234,10 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgments
 
-- NCERT for free educational content
 - Supabase for the amazing database platform
-- Ollama for open-source LLM hosting
+- xAI / Ollama for open-source LLM access
 - Vercel for seamless deployment
+- The broader open-source educational community
 
 ## 📞 Support
 

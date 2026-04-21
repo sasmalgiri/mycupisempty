@@ -19,12 +19,30 @@ export default function ParentDashboard() {
   const [feedbackText, setFeedbackText] = useState('');
   const [goalModal, setGoalModal] = useState(false);
   const [goalForm, setGoalForm] = useState({ pillar: 'character', title: '', description: '', due_date: '' });
+  const [digest, setDigest] = useState<any>(null);
+  const [timeline, setTimeline] = useState<any>(null);
+  const [calibration, setCalibration] = useState<any>(null);
 
   const loadChild = async (studentId: string) => {
     setSelectedChild(studentId);
     setChildLoading(true);
     const data = await getChildOverview(studentId);
     setChildData(data);
+
+    // Load the three parent-facing insights in parallel — empathy, timeline, calibration
+    const query = `?studentId=${encodeURIComponent(studentId)}`;
+    try {
+      const [digestRes, timelineRes, calibRes] = await Promise.all([
+        fetch('/api/parent-digest' + query).then(r => r.json()).catch(() => null),
+        fetch('/api/growth-timeline' + query + '&months=6').then(r => r.json()).catch(() => null),
+        fetch('/api/method-calibration' + query).then(r => r.json()).catch(() => null),
+      ]);
+      setDigest(digestRes);
+      setTimeline(timelineRes);
+      setCalibration(calibRes);
+    } catch {
+      // ignore
+    }
     setChildLoading(false);
   };
 
@@ -74,6 +92,102 @@ export default function ParentDashboard() {
 
       {childLoading ? <LoadingSpinner /> : childData ? (
         <div className="space-y-6">
+          {/* Empathy Digest — natural language letter */}
+          {digest?.letter && (
+            <Card className="p-6 border-primary-500/30">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-lg font-bold text-white">This Week with {digest.digest?.studentName || 'Your Child'}</h2>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/parent-digest/share?studentId=${selectedChild}&format=whatsapp`);
+                      const data = await res.json();
+                      if (data.shareUrls?.whatsapp) {
+                        window.open(data.shareUrls.whatsapp, '_blank');
+                      }
+                    } catch {}
+                  }}
+                  className="text-xs px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded-lg text-white font-medium"
+                >
+                  💬 Share on WhatsApp
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mb-3">{digest.digest?.headline}</p>
+              <div className="text-sm text-gray-200 whitespace-pre-line leading-relaxed">{digest.letter}</div>
+            </Card>
+          )}
+
+          {/* Per-Subject Method Calibration — observed */}
+          {calibration?.calibration?.length > 0 && (
+            <Card className="p-6">
+              <h2 className="text-lg font-bold text-white mb-1">How Your Child Learns Best</h2>
+              <p className="text-xs text-gray-400 mb-4">Observed from behavior — not a self-report quiz.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {calibration.calibration.slice(0, 6).map((c: any) => (
+                  <div key={c.subjectId} className="p-3 bg-gray-800 rounded-lg">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-sm text-white">{c.subjectName}</span>
+                      <span className="text-xs font-bold text-emerald-400 capitalize">
+                        {c.recommendedMethod.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400">{c.evidence}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Growth Timeline — 4 dimensions over months */}
+          {timeline?.timeline?.length > 0 && (
+            <Card className="p-6">
+              <h2 className="text-lg font-bold text-white mb-1">Whole-Human Growth</h2>
+              <p className="text-xs text-gray-400 mb-4">{timeline.headline}</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                {timeline.growthDeltas && [
+                  { label: 'Academic', value: timeline.growthDeltas.academic, icon: '📚', color: '#6366f1' },
+                  { label: 'Cognitive', value: timeline.growthDeltas.cognitive, icon: '🧠', color: '#8b5cf6' },
+                  { label: 'Character', value: timeline.growthDeltas.character, icon: '🌱', color: '#22c55e' },
+                  { label: 'Life Ready', value: timeline.growthDeltas.lifeReadiness, icon: '🌍', color: '#f59e0b' },
+                ].map(m => (
+                  <div key={m.label} className="p-3 bg-gray-800 rounded-lg text-center">
+                    <div className="text-2xl">{m.icon}</div>
+                    <div className="text-xs text-gray-400 mt-1">{m.label}</div>
+                    <div className="text-lg font-bold" style={{ color: m.color }}>
+                      {m.value >= 0 ? '+' : ''}{m.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                {timeline.timeline.slice(-3).map((m: any) => (
+                  <div key={m.month} className="flex items-center gap-3 text-xs">
+                    <span className="text-gray-400 w-24 shrink-0">{m.label}</span>
+                    <div className="flex-1 flex gap-1">
+                      <div className="flex-1 h-5 bg-gray-800 rounded overflow-hidden relative">
+                        <div className="h-full bg-indigo-600" style={{ width: `${m.academic.avgAccuracy}%` }} />
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white">Ac {m.academic.avgAccuracy}%</span>
+                      </div>
+                      <div className="flex-1 h-5 bg-gray-800 rounded overflow-hidden relative">
+                        <div className="h-full bg-violet-600" style={{ width: `${m.cognitive.composite}%` }} />
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white">Co {m.cognitive.composite}</span>
+                      </div>
+                      <div className="flex-1 h-5 bg-gray-800 rounded overflow-hidden relative">
+                        <div className="h-full bg-emerald-600" style={{ width: `${m.character.composite}%` }} />
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white">Ch {m.character.composite}</span>
+                      </div>
+                      <div className="flex-1 h-5 bg-gray-800 rounded overflow-hidden relative">
+                        <div className="h-full bg-amber-600" style={{ width: `${m.lifeReadiness.composite}%` }} />
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white">Li {m.lifeReadiness.composite}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
           {/* Pillar Scores */}
           {childData.profile && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -272,6 +386,8 @@ export default function ParentDashboard() {
               type="date"
               value={goalForm.due_date}
               onChange={e => setGoalForm({ ...goalForm, due_date: e.target.value })}
+              aria-label="Goal due date"
+              title="Due date"
               className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-sm text-white mb-4"
             />
             <div className="flex gap-2 justify-end">

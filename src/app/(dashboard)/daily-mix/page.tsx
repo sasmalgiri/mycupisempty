@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { CHARACTER_VALUES, getAgeFraming, getDailyPractice, getSourceQuote, type CharacterValue } from '@/lib/character-framework';
+import { collectSignal, trackAnswer, trackTimeSpent, trackMood, trackFrustrationSignal, flushSignals, getMicroCheckIn, type MicroCheckIn } from '@/lib/learner-engine';
 
 interface SpacedRepItem {
   id: string;
@@ -65,6 +67,23 @@ const STEP_ICONS: Record<StepName, string> = {
   challenge: '⚡',
 };
 
+/**
+ * Get today's character value — rotates daily through all 15 values
+ */
+function getTodaysCharacterValue(): CharacterValue {
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  return CHARACTER_VALUES[dayOfYear % CHARACTER_VALUES.length];
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  vidyasagar: 'Ishwar Chandra Vidyasagar',
+  gita: 'Bhagavad Gita',
+  shastra: 'Indian Shastra',
+  bratachari: 'Bratachari Movement',
+};
+
 function getCompletedSteps(s: Session): string[] {
   const steps: string[] = [];
   if (s.spaced_rep_completed > 0) steps.push('spaced_rep');
@@ -96,6 +115,22 @@ export default function DailyMixPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [challengeSubmitted, setChallengeSubmitted] = useState(false);
 
+  // Character wisdom — today's value rotates daily
+  const todaysValue = useMemo(() => getTodaysCharacterValue(), []);
+  const classLevel = 8; // TODO: get from user profile
+  const wisdomQuote = useMemo(() => getAgeFraming(todaysValue, classLevel), [todaysValue]);
+  const dailyPractice = useMemo(() => getDailyPractice(todaysValue), [todaysValue]);
+  const sourceQuote = useMemo(() => getSourceQuote(todaysValue), [todaysValue]);
+
+  // Learner intelligence — passive tracking
+  const [userId, setUserId] = useState('');
+  const stepStartTime = useRef(Date.now());
+  const sessionStartTime = useRef(Date.now());
+  // Micro check-in state — appears between steps
+  const [showCheckIn, setShowCheckIn] = useState(false);
+  const [currentCheckIn, setCurrentCheckIn] = useState<MicroCheckIn | null>(null);
+  const [pendingNextStep, setPendingNextStep] = useState<number | null>(null);
+
   const fetchSession = useCallback(async () => {
     try {
       setLoading(true);
@@ -123,7 +158,68 @@ export default function DailyMixPage() {
 
   useEffect(() => {
     fetchSession();
+    // Get user ID for signal tracking
+    fetch('/api/learner-signals').then(r => r.json()).then(d => {
+      // If successful, we're authenticated
+    }).catch(() => {});
+    sessionStartTime.current = Date.now();
+    // Flush signals when leaving
+    return () => { flushSignals(); };
   }, [fetchSession]);
+
+  // Track time spent per step
+  useEffect(() => {
+    stepStartTime.current = Date.now();
+  }, [currentStep]);
+
+  // Helper to advance step with optional micro check-in
+  const advanceWithCheckIn = useCallback((nextStep: number, context: 'after_lesson' | 'mid_session' | 'after_challenge') => {
+    // Track time on current step
+    const timeOnStep = (Date.now() - stepStartTime.current) / 1000;
+    collectSignal({
+      user_id: userId || 'anonymous',
+      signal_type: 'step_time',
+      category: 'engagement',
+      source: 'daily_mix',
+      value: timeOnStep,
+      metadata: { step: STEPS[currentStep], step_index: currentStep },
+    });
+
+    // Show a micro check-in between steps (not every time — ~40% chance)
+    if (Math.random() < 0.4 && nextStep < STEPS.length) {
+      const checkIn = getMicroCheckIn(context);
+      setCurrentCheckIn(checkIn);
+      setPendingNextStep(nextStep);
+      setShowCheckIn(true);
+    } else {
+      setCurrentStep(nextStep);
+    }
+  }, [userId, currentStep]);
+
+  const handleCheckInResponse = (value: string) => {
+    if (currentCheckIn) {
+      collectSignal({
+        user_id: userId || 'anonymous',
+        signal_type: currentCheckIn.type,
+        category: 'emotional',
+        source: 'daily_mix',
+        value: currentCheckIn.options.findIndex(o => o.value === value) / Math.max(currentCheckIn.options.length - 1, 1),
+        metadata: { response: value, check_in_id: currentCheckIn.id },
+      });
+
+      // Track mood specifically
+      if (currentCheckIn.type === 'mood_emoji') {
+        trackMood(userId || 'anonymous', 'daily_mix', value as any);
+      }
+    }
+
+    setShowCheckIn(false);
+    setCurrentCheckIn(null);
+    if (pendingNextStep !== null) {
+      setCurrentStep(pendingNextStep);
+      setPendingNextStep(null);
+    }
+  };
 
   const postAction = async (action: string, data?: any) => {
     if (!session) return null;
@@ -154,34 +250,62 @@ export default function DailyMixPage() {
       item_id,
       quality,
     }));
+    // Track each card rating as a performance signal
+    ratings.forEach(r => {
+      trackAnswer(userId || 'anonymous', 'daily_mix', r.quality >= 2, (Date.now() - stepStartTime.current) / 1000);
+    });
     await postAction('complete_spaced_rep', { ratings });
-    setCurrentStep(1);
+    advanceWithCheckIn(1, 'after_lesson');
   };
 
   const handleCompleteConcept = async () => {
     await postAction('complete_concept');
-    setCurrentStep(2);
+    advanceWithCheckIn(2, 'after_lesson');
   };
 
   const handleCompleteHabit = async (completed: boolean) => {
     setHabitDone(completed);
     const habitId = session?.habit_check?.habit_id;
+    collectSignal({
+      user_id: userId || 'anonymous',
+      signal_type: 'habit_completion',
+      category: 'behavioral',
+      source: 'daily_mix',
+      value: completed ? 1 : 0,
+      metadata: { habit_id: habitId },
+    });
     await postAction('complete_habit', { habit_id: habitId, completed });
-    setCurrentStep(3);
+    advanceWithCheckIn(3, 'mid_session');
   };
 
   const handleCompleteReflection = async () => {
+    // Track reflection depth by word count
+    const wordCount = reflectionText.trim().split(/\s+/).filter(Boolean).length;
+    collectSignal({
+      user_id: userId || 'anonymous',
+      signal_type: 'reflection_depth',
+      category: 'engagement',
+      source: 'daily_mix',
+      value: Math.min(wordCount / 50, 1),  // normalize: 50 words = 1.0
+      metadata: { word_count: wordCount, has_content: wordCount > 3 },
+    });
     await postAction('complete_reflection', { response: reflectionText });
-    setCurrentStep(4);
+    advanceWithCheckIn(4, 'mid_session');
   };
 
   const handleCompleteChallenge = async () => {
     const correct = selectedAnswer === session?.challenge_item?.correct_answer;
+    const timeOnChallenge = (Date.now() - stepStartTime.current) / 1000;
     setChallengeSubmitted(true);
+    trackAnswer(userId || 'anonymous', 'daily_mix', correct, timeOnChallenge);
     await postAction('complete_challenge', { answer: selectedAnswer, correct });
   };
 
   const handleFinish = async () => {
+    // Track total session time
+    const totalTime = (Date.now() - sessionStartTime.current) / 1000;
+    trackTimeSpent(userId || 'anonymous', 'daily_mix', totalTime);
+    flushSignals();  // Send all queued signals now
     const result = await postAction('finish');
     if (result) {
       setIsFinished(true);
@@ -284,7 +408,7 @@ export default function DailyMixPage() {
             </h1>
             <p className="text-gray-500 mb-6">Great job today! Come back tomorrow for a fresh session.</p>
 
-            <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-gradient-to-br from-warning-50 to-warning-100 rounded-2xl p-4">
                 <p className="text-3xl font-bold text-warning-600">+{session.xp_earned}</p>
                 <p className="text-sm text-warning-500">XP Earned</p>
@@ -295,6 +419,26 @@ export default function DailyMixPage() {
                 </p>
                 <p className="text-sm text-success-500">Steps Done</p>
               </div>
+            </div>
+
+            {/* Character Growth Insight */}
+            <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 border border-amber-200/40 rounded-2xl p-5 mb-6 text-left">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🪔</span>
+                <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">
+                  Character Growth Today
+                </p>
+              </div>
+              <p className="text-sm font-semibold text-gray-900 mb-1">
+                {todaysValue.name} &middot; {todaysValue.name_bn}
+              </p>
+              <p className="text-sm text-gray-600 italic mb-2">
+                &ldquo;{wisdomQuote}&rdquo;
+              </p>
+              <p className="text-xs text-amber-700">
+                By reviewing, learning, reflecting, and challenging yourself today — you practiced <strong>{todaysValue.name.split('(')[0].trim().toLowerCase()}</strong>.
+                {' '}{SOURCE_LABELS[todaysValue.source]} teaches us this is how real growth happens.
+              </p>
             </div>
 
             <div className="flex flex-wrap gap-2 justify-center mb-8">
@@ -353,7 +497,7 @@ export default function DailyMixPage() {
             A personalized 5-10 minute session combining review, learning, habits, reflection, and a challenge!
           </p>
 
-          <div className="flex flex-wrap gap-3 justify-center mb-8">
+          <div className="flex flex-wrap gap-3 justify-center mb-6">
             {STEPS.map(step => (
               <div
                 key={step}
@@ -363,6 +507,19 @@ export default function DailyMixPage() {
                 <span>{STEP_LABELS[step]}</span>
               </div>
             ))}
+          </div>
+
+          {/* Today's Character Wisdom */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/50 rounded-2xl p-4 mb-8 text-left">
+            <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-1">
+              Today&apos;s Wisdom &middot; {SOURCE_LABELS[todaysValue.source]}
+            </p>
+            <p className="text-sm font-medium text-gray-800 italic mb-1">
+              &ldquo;{wisdomQuote}&rdquo;
+            </p>
+            <p className="text-xs text-amber-700">
+              {todaysValue.name} ({todaysValue.name_bn})
+            </p>
           </div>
 
           <button
@@ -413,7 +570,48 @@ export default function DailyMixPage() {
               );
             })}
           </div>
+
+          {/* Wisdom bridge — connects current step to character growth */}
+          <div className="mt-3 px-1">
+            <p className="text-xs text-amber-700/70 italic text-center">
+              {currentStep === 0 && `Reviewing what you've learned builds ${todaysValue.name.split('(')[0].trim().toLowerCase()} — remembering strengthens your mind.`}
+              {currentStep === 1 && `Every new concept is a step toward wisdom. "${todaysValue.name_bn}" grows when you stay curious.`}
+              {currentStep === 2 && `Small habits, practiced daily, shape who you become. — ${SOURCE_LABELS[todaysValue.source]}`}
+              {currentStep === 3 && `Reflection is where learning becomes growth. Take a moment with today's wisdom.`}
+              {currentStep === 4 && `Face the challenge with courage. ${todaysValue.name.split('(')[0].trim()} means trying even when it's hard.`}
+            </p>
+          </div>
         </div>
+
+        {/* Micro Check-In Overlay — appears between steps, feels natural */}
+        {showCheckIn && currentCheckIn && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-white rounded-3xl shadow-lg p-6 mb-4 text-center"
+          >
+            <p className="text-lg font-bold text-gray-900 mb-4">{currentCheckIn.prompt}</p>
+            <div className="flex justify-center gap-3">
+              {currentCheckIn.options.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleCheckInResponse(opt.value)}
+                  className="flex flex-col items-center gap-1 px-4 py-3 rounded-2xl bg-gray-50 hover:bg-primary-50 border-2 border-gray-200 hover:border-primary-300 transition-all"
+                >
+                  <span className="text-2xl">{opt.icon}</span>
+                  <span className="text-xs font-medium text-gray-600">{opt.label}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => handleCheckInResponse('skipped')}
+              className="mt-3 text-xs text-gray-400 hover:text-gray-600"
+            >
+              Skip
+            </button>
+          </motion.div>
+        )}
 
         {/* Step content */}
         <AnimatePresence mode="wait">
@@ -663,7 +861,7 @@ export default function DailyMixPage() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 mb-6">
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 mb-4">
                 <p className="text-xs font-semibold text-purple-500 uppercase tracking-wide mb-2">
                   {mix.reflection_prompt.type}
                 </p>
@@ -672,10 +870,29 @@ export default function DailyMixPage() {
                 </p>
               </div>
 
+              {/* Character Wisdom Connection */}
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/40 rounded-xl p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl flex-shrink-0 mt-0.5">🪔</span>
+                  <div>
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">
+                      Today&apos;s Practice &middot; {todaysValue.name_bn}
+                    </p>
+                    {sourceQuote && (
+                      <p className="text-sm text-gray-700 italic mb-1">&ldquo;{sourceQuote}&rdquo;</p>
+                    )}
+                    <p className="text-sm text-amber-800 font-medium">{dailyPractice}</p>
+                    <p className="text-xs text-amber-600 mt-1">
+                      — {SOURCE_LABELS[todaysValue.source]}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <textarea
                 value={reflectionText}
                 onChange={(e) => setReflectionText(e.target.value)}
-                placeholder="Write your thoughts here..."
+                placeholder="Write your thoughts here... How does today's wisdom connect to what you learned?"
                 rows={4}
                 className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent resize-none mb-6"
               />

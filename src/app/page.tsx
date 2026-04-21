@@ -49,7 +49,7 @@ export default function HomePage() {
           </h1>
           
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-10 animate-fade-in">
-            Complete NCERT curriculum for Classes 1-12. Personalized learning paths 
+            Classes 1–12 learning paths covering topics commonly taught in Indian schools. Personalized learning paths
             based on your unique learning style. Practice with adaptive questions 
             and get instant help from our AI tutor.
           </p>
@@ -86,7 +86,7 @@ export default function HomePage() {
               { value: '12', label: 'Classes (1-12)' },
               { value: '15+', label: 'Subjects' },
               { value: '10K+', label: 'Questions' },
-              { value: '100%', label: 'NCERT Aligned' },
+              { value: '100%', label: 'Topics Covered' },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-4xl font-extrabold gradient-text mb-1">{stat.value}</div>
@@ -176,10 +176,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-extrabold mb-4">
-              Complete <span className="gradient-text">NCERT Curriculum</span>
+              Complete <span className="gradient-text">School Subject Coverage</span>
             </h2>
             <p className="text-xl text-gray-600">
-              All subjects from Class 1 to Class 12
+              All subjects commonly taught from Class 1 to Class 12
             </p>
           </div>
 
@@ -251,7 +251,7 @@ export default function HomePage() {
             <div>
               <h4 className="font-bold mb-4">Resources</h4>
               <ul className="space-y-2 text-gray-400">
-                <li>NCERT-Aligned Curriculum</li>
+                <li>General School Subjects</li>
                 <li>Practice Questions</li>
                 <li>AI Tutor</li>
                 <li>Study Materials</li>
@@ -268,7 +268,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-gray-500">
-            <p>© 2024 MyCupIsEmpty. All rights reserved. Curriculum aligned with NCERT/CBSE framework.</p>
+            <p>© {new Date().getFullYear()} MyCupIsEmpty. All rights reserved. MyCupIsEmpty is an independent educational platform — not affiliated with CBSE, CISCE/ICSE, WBBSE, NCERT or any education board.</p>
           </div>
         </div>
       </footer>

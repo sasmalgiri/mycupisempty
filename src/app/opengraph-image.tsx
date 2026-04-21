@@ -73,7 +73,7 @@ export default async function Image() {
             marginTop: '40px',
           }}
         >
-          {['NCERT Curriculum', '20+ Methods', 'AI Guru', 'Free'].map((tag) => (
+          {['Class 1–12', '20+ Methods', 'AI Tutor', 'Free'].map((tag) => (
             <div
               key={tag}
               style={{
