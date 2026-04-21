@@ -30,6 +30,15 @@ export const SIGNAL = {
   // === Emotional state (micro check-ins) ===
   MOOD: 'mood',                              // canonical; do NOT use 'mood_emoji'
   ENERGY_LEVEL: 'energy_level',
+  /**
+   * difficulty_feel — how hard the student felt a step/session was.
+   * VALUE CONVENTION: monotone in difficulty.
+   *   too_easy   → 0
+   *   just_right → 0.5
+   *   too_hard   → 1
+   * Higher value = harder. Do NOT invert at any write site — downstream
+   * aggregation averages these and inverted writers cancel each other out.
+   */
   DIFFICULTY_FEEL: 'difficulty_feel',
   UNDERSTANDING_CHECK: 'understanding_check',
   FRUSTRATION_SIGNAL: 'frustration_signal',

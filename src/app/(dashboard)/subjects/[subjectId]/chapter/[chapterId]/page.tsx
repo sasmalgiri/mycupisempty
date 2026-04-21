@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import RichContent from '@/components/RichContent';
 
 interface Topic {
   id: string;
@@ -515,22 +516,12 @@ To divide fractions, multiply by the **reciprocal** (flip the second fraction)!
           <div className="p-6 max-w-4xl">
             {activeTab === 'read' && currentTopic && (
               <div className="prose prose-lg max-w-none">
-                <div 
-                  className="markdown-content"
-                  dangerouslySetInnerHTML={{ 
-                    __html: currentTopic.content
-                      .replace(/^# (.*$)/gm, '<h1 class="text-3xl font-bold text-gray-900 mb-4">$1</h1>')
-                      .replace(/^## (.*$)/gm, '<h2 class="text-2xl font-semibold text-gray-800 mt-8 mb-3">$1</h2>')
-                      .replace(/^### (.*$)/gm, '<h3 class="text-xl font-semibold text-gray-700 mt-6 mb-2">$1</h3>')
-                      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-gray-900">$1</strong>')
-                      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                      .replace(/^> (.*$)/gm, '<blockquote class="border-l-4 border-primary-400 bg-primary-50 p-4 my-4 rounded-r-lg italic">$1</blockquote>')
-                      .replace(/^- (.*$)/gm, '<li class="ml-4 mb-1">$1</li>')
-                      .replace(/^(\d+)\. (.*$)/gm, '<li class="ml-4 mb-1"><span class="font-bold">$1.</span> $2</li>')
-                      .replace(/\n\n/g, '</p><p class="mb-4">')
-                      .replace(/✓/g, '<span class="text-success-500">✓</span>')
-                  }}
-                />
+                {/* Using RichContent instead of inline regex transforms —
+                    the previous implementation piped topic content directly
+                    into dangerouslySetInnerHTML without HTML-escaping, so any
+                    raw <script> or event handler in the content string would
+                    execute. RichContent.escapeHtml() neutralizes that. */}
+                <RichContent text={currentTopic.content} className="markdown-content" />
                 
                 {/* Navigation Buttons */}
                 <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">

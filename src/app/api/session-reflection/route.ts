@@ -104,7 +104,11 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Difficulty-felt → feedback on calibration
+      // Difficulty-felt → feedback on calibration. Encoding MUST match the
+      // canonical convention in signal-types.ts: higher value = harder. This
+      // used to be inverted (too_easy=1, too_hard=0) while the daily-mix thumb
+      // used the opposite — any aggregator averaging both sources would cancel
+      // them to noise.
       if (difficultyFelt) {
         signals.push({
           user_id: user.id,
@@ -112,7 +116,7 @@ export async function POST(request: NextRequest) {
           category: 'metacognition',
           source: 'reflection',
           subject_id: subjectId || null,
-          value: difficultyFelt === 'too_easy' ? 1 : difficultyFelt === 'just_right' ? 0.5 : 0,
+          value: difficultyFelt === 'too_easy' ? 0 : difficultyFelt === 'just_right' ? 0.5 : 1,
           metadata: { felt: difficultyFelt, session_kind: sessionKind },
           created_at: now,
         });
