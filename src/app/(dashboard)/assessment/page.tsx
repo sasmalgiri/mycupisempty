@@ -322,9 +322,12 @@ export default function AssessmentPage() {
 
         const primary = Object.entries(normalized).sort((a, b) => b[1] - a[1])[0][0];
 
-        // Save to existing learning_styles table for backward compat
+        // Save to existing learning_styles table for backward compat.
+        // .upsert() returns the error in the result object instead of throwing,
+        // so we have to check it explicitly — otherwise a silently-failed save
+        // sends the student to /dashboard thinking their assessment was recorded.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from('learning_styles') as any).upsert({
+        const { error: stylesErr } = await (supabase.from('learning_styles') as any).upsert({
           user_id: user.id,
           visual_score: normalized.visual,
           auditory_score: normalized.auditory,
@@ -333,6 +336,7 @@ export default function AssessmentPage() {
           dominant_style: primary,
           assessment_date: new Date().toISOString(),
         });
+        if (stylesErr) console.error('Assessment learning_styles upsert failed:', stylesErr);
 
         // Save the rich behavioral signals for the learner engine
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

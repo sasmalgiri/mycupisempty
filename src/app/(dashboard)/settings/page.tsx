@@ -54,6 +54,7 @@ export default function SettingsPage() {
     }
   });
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{ kind: 'ok' | 'error'; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'learning' | 'preferences'>('profile');
 
   useEffect(() => {
@@ -93,12 +94,16 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveStatus(null);
     try {
       const supabase = createBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setSaveStatus({ kind: 'error', message: 'Not signed in.' });
+        return;
+      }
 
-      await (supabase as any)
+      const { error } = await (supabase as any)
         .from('profiles')
         .update({
           full_name: settings.name,
@@ -106,6 +111,15 @@ export default function SettingsPage() {
           board_code: settings.board,
         })
         .eq('id', user.id);
+
+      if (error) {
+        setSaveStatus({ kind: 'error', message: error.message || "Couldn't save. Try again." });
+      } else {
+        setSaveStatus({ kind: 'ok', message: 'Saved.' });
+        setTimeout(() => setSaveStatus(null), 3000);
+      }
+    } catch (err: any) {
+      setSaveStatus({ kind: 'error', message: err?.message || "Couldn't save. Try again." });
     } finally {
       setSaving(false);
     }
@@ -130,6 +144,19 @@ export default function SettingsPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {saveStatus && (
+          <div
+            role="status"
+            className={`mb-4 px-4 py-2 rounded-lg text-sm ${
+              saveStatus.kind === 'ok'
+                ? 'bg-success-50 border border-success-200 text-success-800'
+                : 'bg-error-50 border border-error-200 text-error-800'
+            }`}
+          >
+            {saveStatus.message}
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
           {[

@@ -95,7 +95,7 @@ export default function SignupPage() {
         // Note: profiles uses current_class — class_level was a legacy column name
         // referenced in old code but never created. Writing it caused the entire
         // UPDATE to silently reject, dropping role and board_code too.
-        await (supabase as any)
+        const { error: profileErr } = await (supabase as any)
           .from('profiles')
           .update({
             current_class: parseInt(formData.currentClass),
@@ -103,6 +103,10 @@ export default function SignupPage() {
             board_code: formData.board,
           })
           .eq('id', data.user.id);
+        // Don't block signup on a profile-update failure — the auth account
+        // exists, and onboarding will re-collect class/board. But surface the
+        // error to the console so it's not completely silent.
+        if (profileErr) console.error('Profile update after signup failed:', profileErr);
 
         // Send new students to the onboarding flow
         router.push('/onboarding');

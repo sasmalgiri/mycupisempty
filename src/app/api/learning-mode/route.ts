@@ -11,6 +11,7 @@
 
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { getObservedMode } from '@/lib/signal-aggregator';
 
 export type ExplanationMode =
   | 'visual' | 'story' | 'step_by_step' | 'example_first' | 'socratic' | 'drill' | 'hands_on';
@@ -48,10 +49,8 @@ export async function GET(req: Request) {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (!data) return NextResponse.json({ success: true, ...defaultMode() });
-
     // Manual overrides live under baseline_profile.learning_modes[subjectId]
-    const modes = data.baseline_profile?.learning_modes || {};
+    const modes = data?.baseline_profile?.learning_modes || {};
     const manual = modes[subjectId] || modes._global;
     if (manual?.mode && VALID_MODES.includes(manual.mode)) {
       return NextResponse.json({
@@ -62,13 +61,30 @@ export async function GET(req: Request) {
       });
     }
 
-    // Observed from engine: behavioral_observations.subjects[id].preferred_explanation
-    const observed = data.behavioral_observations?.subjects?.[subjectId];
-    if (observed?.preferred_explanation && VALID_MODES.includes(observed.preferred_explanation)) {
+    // Stored observation: behavioral_observations.subjects[id].preferred_explanation.
+    // Still checked first for cheap reads; if missing, derive live from signals.
+    const stored = data?.behavioral_observations?.subjects?.[subjectId];
+    if (stored?.preferred_explanation && VALID_MODES.includes(stored.preferred_explanation)) {
       return NextResponse.json({
         success: true,
-        mode: observed.preferred_explanation,
-        pace: observed.preferred_pace || 'moderate',
+        mode: stored.preferred_explanation,
+        pace: stored.preferred_pace || 'moderate',
+        source: 'observed',
+      });
+    }
+
+    // Live derivation from recent signals. Requires at least a few
+    // concept_mode_entered / learning_mode_set rows before claiming anything.
+    const scoped = subjectId === '_global' ? null : subjectId;
+    const observed = await getObservedMode(supabase, user.id, scoped)
+      .catch(() => null);
+    if (observed && observed.confidence >= 0.5) {
+      // Persist so subsequent reads don't re-aggregate every mount.
+      persistObservation(supabase, user.id, subjectId, observed.mode).catch(() => {});
+      return NextResponse.json({
+        success: true,
+        mode: observed.mode,
+        pace: 'moderate',
         source: 'observed',
       });
     }
@@ -128,4 +144,37 @@ export async function POST(req: Request) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
+}
+
+/**
+ * Cache a derived observation back to learner_profiles.behavioral_observations
+ * so subsequent GETs don't re-aggregate signals. Merge-safe: reads existing
+ * JSONB, deep-merges the new subject entry, writes. Best-effort — failures
+ * don't block the read path.
+ */
+async function persistObservation(
+  supabase: any,
+  userId: string,
+  subjectId: string,
+  mode: ExplanationMode,
+): Promise<void> {
+  const { data: existing } = await supabase
+    .from('learner_profiles')
+    .select('behavioral_observations')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  const obs = existing?.behavioral_observations || {};
+  obs.subjects = obs.subjects || {};
+  obs.subjects[subjectId] = {
+    ...(obs.subjects[subjectId] || {}),
+    preferred_explanation: mode,
+    observed_at: new Date().toISOString(),
+  };
+
+  await supabase.from('learner_profiles').upsert({
+    user_id: userId,
+    behavioral_observations: obs,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' });
 }

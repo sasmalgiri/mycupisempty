@@ -4,6 +4,7 @@ import { buildStudentState, decideAdaptation } from '@/lib/student-state';
 import { pickInterventionForMoment } from '@/lib/intervention-engine';
 import { recordMethodOutcome } from '@/lib/method-calibration';
 import { loadActiveDirectives, adaptationDelta } from '@/lib/directive-adapter';
+import { getDifficultyBias } from '@/lib/signal-aggregator';
 
 // State-aware reflection prompts — different prompts for different student states
 const REFLECTION_PROMPTS = {
@@ -190,9 +191,25 @@ export async function GET(request: NextRequest) {
     const directives = await loadActiveDirectives(supabase, user.id);
     const delta = adaptationDelta(directives);
 
+    // Student's own "too easy / too hard" thumb from recent challenges. Only
+    // nudges when the student state + main-brain are neutral — explicit
+    // directives still take precedence because the main brain sees more
+    // context than a handful of thumb taps.
+    const diffBias = await getDifficultyBias(supabase, user.id).catch(() => ({
+      direction: 'same' as const, samples: 0, avg: 0.5,
+    }));
+
     // Effective intent after applying main-brain delta
-    const effectiveSimplify = adaptation?.shouldSimplify || delta.difficultyAdjust < 0;
-    const effectiveChallenge = adaptation?.shouldChallenge && delta.difficultyAdjust >= 0;
+    let effectiveSimplify = adaptation?.shouldSimplify || delta.difficultyAdjust < 0;
+    let effectiveChallenge = adaptation?.shouldChallenge && delta.difficultyAdjust >= 0;
+
+    // Student-voice override: only apply when upstream signals are neutral so
+    // we don't fight an explicit main-brain decision.
+    const upstreamNeutral = !effectiveSimplify && !effectiveChallenge && delta.difficultyAdjust === 0;
+    if (upstreamNeutral && diffBias.samples >= 3) {
+      if (diffBias.direction === 'easier') effectiveSimplify = true;
+      else if (diffBias.direction === 'harder') effectiveChallenge = true;
+    }
 
     if (effectiveSimplify) {
       challengeQuery = challengeQuery.in('difficulty', ['easy', 'medium']);
