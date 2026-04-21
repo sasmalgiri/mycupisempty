@@ -91,11 +91,14 @@ export default function SignupPage() {
       if (error) throw error;
 
       if (data.user) {
-        // Update profile with class_level, role, and board (trigger only sets name/email)
+        // Update profile with class, role, and board (trigger only sets name/email).
+        // Note: profiles uses current_class — class_level was a legacy column name
+        // referenced in old code but never created. Writing it caused the entire
+        // UPDATE to silently reject, dropping role and board_code too.
         await (supabase as any)
           .from('profiles')
           .update({
-            class_level: parseInt(formData.currentClass),
+            current_class: parseInt(formData.currentClass),
             role: formData.role,
             board_code: formData.board,
           })

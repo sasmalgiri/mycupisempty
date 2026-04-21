@@ -64,7 +64,7 @@ export default function SettingsPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, class_level, board_code')
+        .select('full_name, current_class, board_code')
         .eq('id', user.id)
         .single() as any;
 
@@ -78,7 +78,7 @@ export default function SettingsPage() {
         ...prev,
         name: profile?.full_name || user.user_metadata?.full_name || '',
         email: user.email || '',
-        classNumber: profile?.class_level || 0,
+        classNumber: profile?.current_class || 0,
         board: profile?.board_code || 'cbse',
         learningStyle: {
           visual: style?.visual_score || 0,
@@ -102,7 +102,7 @@ export default function SettingsPage() {
         .from('profiles')
         .update({
           full_name: settings.name,
-          class_level: settings.classNumber,
+          current_class: settings.classNumber,
           board_code: settings.board,
         })
         .eq('id', user.id);

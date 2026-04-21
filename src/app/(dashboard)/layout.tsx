@@ -98,10 +98,11 @@ export default function DashboardLayout({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch profile
+      // Fetch profile (current_class — the canonical column; profiles.class_level
+      // never existed in any migration even though some legacy code referenced it).
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, class_level, board_code')
+        .select('full_name, current_class, board_code')
         .eq('id', user.id)
         .single() as any;
 
@@ -114,7 +115,7 @@ export default function DashboardLayout({
 
       setUserProfile({
         name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Student',
-        class: profile?.class_level || 0,
+        class: profile?.current_class || 0,
         board: profile?.board_code || 'cbse',
         xp: stats?.total_xp || 0,
         streak: stats?.current_streak || 0,

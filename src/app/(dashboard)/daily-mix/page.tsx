@@ -1130,8 +1130,13 @@ export default function DailyMixPage() {
                             <button
                               key={opt.v}
                               type="button"
-                              onClick={async () => {
+                              onClick={() => {
                                 setDifficultyFeedback(opt.v);
+                                // Single write path via the client signal queue —
+                                // it flushes to /api/learner-signals which is the
+                                // canonical store. Earlier I also POSTed to
+                                // /api/difficulty-bias from here, which inserted a
+                                // second row for the same click and inflated counts.
                                 collectSignal({
                                   user_id: userId || 'anonymous',
                                   signal_type: 'difficulty_feel',
@@ -1140,13 +1145,7 @@ export default function DailyMixPage() {
                                   value: opt.v === 'too_easy' ? 0 : opt.v === 'just_right' ? 0.5 : 1,
                                   metadata: { response: opt.v, step: 'challenge' },
                                 });
-                                try {
-                                  await fetch('/api/difficulty-bias', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ feedback: opt.v, context: 'daily_mix_challenge' }),
-                                  });
-                                } catch {}
+                                flushSignals();
                               }}
                               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
                                 active

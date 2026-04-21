@@ -48,11 +48,11 @@ export default function ReflectPage() {
       // Fetch profile for age
       const { data: profile } = await (supabase as any)
         .from('profiles')
-        .select('class_level')
+        .select('current_class')
         .eq('id', user.id)
         .single();
 
-      const age = (profile?.class_level || 8) + 5; // rough age estimate
+      const age = (profile?.current_class || 8) + 5; // rough age estimate
 
       // Fetch prompts
       const promptRes = await fetch(`/api/development?action=reflection_prompts&age=${age}&type=${selectedType}`);
