@@ -5,6 +5,7 @@ import { useDevProfile, useHabits, useGoals, useReflections, useBadges, useFeedb
 import { Card, LoadingSpinner, Button } from '@/components/ui/index';
 import { BuddyBubble } from '@/components/ui/upgrade';
 import Link from 'next/link';
+import MyNotebook from '@/components/MyNotebook';
 
 const PILLAR_CONFIG = {
   academic: { label: 'Learn', icon: '📚', color: '#3b82f6', path: '/pedagogy' },
@@ -31,7 +32,7 @@ export default function MeDashboard() {
   const { badges } = useBadges();
   const { feedback } = useFeedback();
   const { interests } = useInterests();
-  const [tab, setTab] = useState<'overview' | 'think' | 'grow' | 'live' | 'path'>('overview');
+  const [tab, setTab] = useState<'overview' | 'think' | 'grow' | 'live' | 'path' | 'notebook'>('overview');
 
   if (loading) return <div className="flex justify-center py-20"><LoadingSpinner /></div>;
 
@@ -117,7 +118,7 @@ export default function MeDashboard() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto">
-        {(['overview', 'think', 'grow', 'live', 'path'] as const).map(t => (
+        {(['overview', 'think', 'grow', 'live', 'path', 'notebook'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -125,7 +126,7 @@ export default function MeDashboard() {
               tab === t ? 'bg-primary-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
             }`}
           >
-            {t === 'overview' ? 'Overview' : t === 'think' ? '🧠 Think' : t === 'grow' ? '🌱 Grow' : t === 'live' ? '🌍 Live' : '🧭 Path'}
+            {t === 'overview' ? 'Overview' : t === 'think' ? '🧠 Think' : t === 'grow' ? '🌱 Grow' : t === 'live' ? '🌍 Live' : t === 'path' ? '🧭 Path' : '📓 Notebook'}
           </button>
         ))}
       </div>
@@ -136,6 +137,7 @@ export default function MeDashboard() {
       {tab === 'grow' && <PillarTab profile={profile} pillar="character" />}
       {tab === 'live' && <PillarTab profile={profile} pillar="life_readiness" />}
       {tab === 'path' && <PathTab domainAffinities={domainAffinities} interests={interests} archetypes={archetypes} />}
+      {tab === 'notebook' && <MyNotebook />}
     </div>
   );
 }

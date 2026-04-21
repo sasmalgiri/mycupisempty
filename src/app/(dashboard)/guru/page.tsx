@@ -4,6 +4,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useGuruChat } from '@/hooks/upgrade';
 import { Slider, MethodCard, BuddyBubble } from '@/components/ui/upgrade';
 import { Button, LoadingSpinner } from '@/components/ui/index';
+import LearningModePill, { type ExplanationMode } from '@/components/LearningModePill';
+
+// Map the abstract "how I learn" mode onto Guru's existing method + socratic toggle.
+const MODE_TO_GURU: Record<ExplanationMode, { method: string; socratic: boolean }> = {
+  visual:        { method: 'mind_map',        socratic: false },
+  story:         { method: 'storytelling',    socratic: false },
+  example_first: { method: 'analogy',         socratic: false },
+  step_by_step:  { method: 'feynman',         socratic: false },
+  socratic:      { method: 'socratic',        socratic: true },
+  drill:         { method: 'active_recall',   socratic: false },
+  hands_on:      { method: 'project_based',   socratic: false },
+};
 
 const DIFFICULTY_LABELS: Record<number, string> = {
   1: 'ELI5', 2: 'Simple', 3: 'Easy', 4: 'Basic', 5: 'Standard',
@@ -54,6 +66,24 @@ export default function GuruPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Sticky mode: hydrate method + socratic from the learner's saved/observed mode
+  // on first load so returning students don't have to re-pick every session.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/learning-mode')
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled || !d?.success || !d?.mode) return;
+        const mapped = MODE_TO_GURU[d.mode as ExplanationMode];
+        if (mapped) {
+          setMethod(mapped.method);
+          setIsSocratic(mapped.socratic);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [setMethod, setIsSocratic]);
+
   const handleSend = () => {
     if (!input.trim() || loading) return;
     sendMessage(input.trim());
@@ -74,7 +104,19 @@ export default function GuruPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* How I learn — one-click shortcut that sets method + socratic together */}
+            <LearningModePill
+              variant="dark"
+              onChange={(m) => {
+                const mapped = MODE_TO_GURU[m];
+                if (mapped) {
+                  setMethod(mapped.method);
+                  setIsSocratic(mapped.socratic);
+                }
+              }}
+            />
+
             {/* Toggles */}
             <button
               onClick={() => setIsSocratic(!isSocratic)}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import ReadAloudButton from '@/components/ReadAloudButton';
 
 interface Flashcard {
   id: string;
@@ -304,6 +305,9 @@ export default function FlashcardsPage() {
                   <p className="text-xl font-semibold text-gray-900 text-center leading-relaxed">
                     {currentCard.front}
                   </p>
+                  <div className="absolute top-4 right-4" onClick={(e) => e.stopPropagation()}>
+                    <ReadAloudButton text={() => currentCard.front} />
+                  </div>
                   <div className="absolute bottom-4 text-sm text-gray-400">
                     Click to reveal answer
                   </div>
@@ -318,6 +322,9 @@ export default function FlashcardsPage() {
                   <p className="text-lg text-gray-800 text-center leading-relaxed whitespace-pre-wrap">
                     {currentCard.back}
                   </p>
+                  <div className="absolute top-4 right-4" onClick={(e) => e.stopPropagation()}>
+                    <ReadAloudButton text={() => currentCard.back} />
+                  </div>
                 </div>
               </div>
             </div>

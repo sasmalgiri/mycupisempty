@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import ReadAloudButton from './ReadAloudButton';
 
 interface Section {
   companionId: string;
@@ -84,12 +85,21 @@ export default function DailyBriefing() {
             <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Your companions say</p>
             <h2 className="text-lg sm:text-xl font-bold leading-tight">{briefing.greeting}</h2>
           </div>
-          <button
-            type="button"
-            onClick={dismiss}
-            aria-label="Dismiss briefing"
-            className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl leading-none px-2"
-          >×</button>
+          <div className="flex items-start gap-1 flex-shrink-0">
+            <ReadAloudButton text={() => {
+              const parts: string[] = [briefing.greeting];
+              briefing.sections.forEach((s) => parts.push(s.line));
+              if (briefing.characterNudge) parts.push(briefing.characterNudge);
+              if (briefing.dailyThought?.body) parts.push(briefing.dailyThought.body);
+              return parts.join('. ');
+            }} label="Listen" />
+            <button
+              type="button"
+              onClick={dismiss}
+              aria-label="Dismiss briefing"
+              className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl leading-none px-2"
+            >×</button>
+          </div>
         </div>
 
         {briefing.sections.length > 0 && (

@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { CHARACTER_VALUES, getAgeFraming, getDailyPractice, getSourceQuote, type CharacterValue } from '@/lib/character-framework';
 import { collectSignal, trackAnswer, trackTimeSpent, trackMood, trackFrustrationSignal, flushSignals, getMicroCheckIn, type MicroCheckIn } from '@/lib/learner-engine';
+import LearningModePill, { type ExplanationMode } from '@/components/LearningModePill';
+import ReadAloudButton from '@/components/ReadAloudButton';
 
 interface SpacedRepItem {
   id: string;
@@ -84,6 +86,88 @@ const SOURCE_LABELS: Record<string, string> = {
   bratachari: 'Bratachari Movement',
 };
 
+// Mode-branched entry point for the New Concept step. Each learner archetype
+// sees a different door into the same topic — visual students get a concept
+// map shortcut, hands-on students jump to the lab, storytellers get a
+// companion narration, etc. Falls back to plain "Start Learning" otherwise.
+function ModeEntryPoint({
+  mode,
+  topic,
+}: {
+  mode: ExplanationMode;
+  topic: { id: string; title: string; subject_id?: string };
+}) {
+  const subjectId = topic.subject_id;
+
+  const primaries: Record<ExplanationMode, { label: string; href: string; icon: string; blurb: string }> = {
+    visual: {
+      icon: '🗺',
+      label: 'See it on the concept map',
+      blurb: 'See how this connects to what you already know.',
+      href: subjectId ? `/subjects/${subjectId}?topic=${topic.id}&view=concept-map` : '/subjects',
+    },
+    story: {
+      icon: '📖',
+      label: 'Hear the story from your companion',
+      blurb: 'Your subject companion will narrate the idea.',
+      href: subjectId ? `/companions?subject=${subjectId}&topic=${topic.id}&mode=story` : '/companions',
+    },
+    example_first: {
+      icon: '🎯',
+      label: 'Show me 2 examples first',
+      blurb: "We'll infer the rule from examples together.",
+      href: `/guru?topic=${topic.id}&mode=example_first&q=${encodeURIComponent('Give me 2 worked examples of ' + topic.title + ', then help me spot the rule.')}`,
+    },
+    step_by_step: {
+      icon: '📋',
+      label: 'Walk me through it step by step',
+      blurb: 'A clear numbered breakdown, your pace.',
+      href: subjectId ? `/subjects/${subjectId}?topic=${topic.id}` : '/subjects',
+    },
+    socratic: {
+      icon: '❓',
+      label: 'Ask me questions — I want to think it out',
+      blurb: "The Guru leads with questions, not answers.",
+      href: `/guru?topic=${topic.id}&socratic=1&q=${encodeURIComponent('Guide me through ' + topic.title + ' by asking me questions.')}`,
+    },
+    drill: {
+      icon: '⚡',
+      label: 'Skip to rapid practice',
+      blurb: 'Flashcards and quick-fire — minimal theory.',
+      href: `/flashcards?topic=${topic.id}`,
+    },
+    hands_on: {
+      icon: '🧪',
+      label: 'Open in the virtual lab',
+      blurb: 'Build it, try it, see what breaks.',
+      href: subjectId ? `/lab?subject=${subjectId}&topic=${topic.id}` : `/subjects`,
+    },
+  };
+
+  const primary = primaries[mode] || primaries.step_by_step;
+
+  return (
+    <div className="mb-4">
+      <Link
+        href={primary.href}
+        className="block w-full text-left py-4 px-5 bg-gradient-to-r from-amber-100 to-orange-100 hover:from-amber-200 hover:to-orange-200 text-amber-900 rounded-xl font-semibold transition-colors mb-2 group"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-2xl flex-shrink-0" aria-hidden="true">{primary.icon}</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-base">{primary.label}</div>
+            <div className="text-xs font-normal text-amber-800/80 mt-0.5">{primary.blurb}</div>
+          </div>
+          <span className="opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" aria-hidden="true">→</span>
+        </div>
+      </Link>
+      <p className="text-[10px] text-gray-400 text-center">
+        Matching how you learn best. You can change that anytime.
+      </p>
+    </div>
+  );
+}
+
 function getCompletedSteps(s: Session): string[] {
   const steps: string[] = [];
   if (s.spaced_rep_completed > 0) steps.push('spaced_rep');
@@ -126,6 +210,18 @@ export default function DailyMixPage() {
   const [userId, setUserId] = useState('');
   const stepStartTime = useRef(Date.now());
   const sessionStartTime = useRef(Date.now());
+
+  // How the student prefers to receive new material — drives Step 1 branching.
+  // Starts as step_by_step and hydrates from /api/learning-mode on mount.
+  const [learningMode, setLearningMode] = useState<ExplanationMode>('step_by_step');
+  const [difficultyFeedback, setDifficultyFeedback] = useState<'too_easy' | 'just_right' | 'too_hard' | null>(null);
+
+  useEffect(() => {
+    fetch('/api/learning-mode')
+      .then((r) => r.json())
+      .then((d) => { if (d?.success && d?.mode) setLearningMode(d.mode); })
+      .catch(() => {});
+  }, []);
   // Micro check-in state — appears between steps
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [currentCheckIn, setCurrentCheckIn] = useState<MicroCheckIn | null>(null);
@@ -539,11 +635,14 @@ export default function DailyMixPage() {
       <div className="max-w-2xl mx-auto">
         {/* Progress bar */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
             <h1 className="text-xl font-bold text-gray-900">Daily Mix</h1>
-            <span className="text-sm font-medium text-gray-500">
-              {stepsCompleted}/{STEPS.length} steps
-            </span>
+            <div className="flex items-center gap-3">
+              <LearningModePill onChange={setLearningMode} />
+              <span className="text-sm font-medium text-gray-500">
+                {stepsCompleted}/{STEPS.length} steps
+              </span>
+            </div>
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
@@ -721,9 +820,15 @@ export default function DailyMixPage() {
 
               {mix.new_concept?.topics ? (
                 <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                    {mix.new_concept.topics.title}
-                  </h3>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      {mix.new_concept.topics.title}
+                    </h3>
+                    <ReadAloudButton text={() => {
+                      const t = mix.new_concept?.topics;
+                      return [t?.title, t?.description].filter(Boolean).join('. ');
+                    }} />
+                  </div>
                   <p className="text-gray-600 mb-4">
                     {mix.new_concept.topics.description || 'Explore this topic to strengthen your foundation.'}
                   </p>
@@ -740,13 +845,12 @@ export default function DailyMixPage() {
                 </div>
               )}
 
+              {/* Mode-branched entry point: match the learner's preferred explanation style */}
               {mix.new_concept?.topics && (
-                <Link
-                  href={`/subjects`}
-                  className="block w-full text-center py-3 bg-amber-100 text-amber-700 rounded-xl font-semibold hover:bg-amber-200 transition-colors mb-4"
-                >
-                  Start Learning
-                </Link>
+                <ModeEntryPoint
+                  mode={learningMode}
+                  topic={mix.new_concept.topics}
+                />
               )}
 
               <button
@@ -862,9 +966,12 @@ export default function DailyMixPage() {
               </div>
 
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 mb-4">
-                <p className="text-xs font-semibold text-purple-500 uppercase tracking-wide mb-2">
-                  {mix.reflection_prompt.type}
-                </p>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <p className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
+                    {mix.reflection_prompt.type}
+                  </p>
+                  <ReadAloudButton text={() => mix.reflection_prompt.prompt} />
+                </div>
                 <p className="text-lg font-medium text-gray-900">
                   {mix.reflection_prompt.prompt}
                 </p>
@@ -928,9 +1035,12 @@ export default function DailyMixPage() {
 
               {mix.challenge_item ? (
                 <>
-                  <p className="text-lg font-medium text-gray-900 mb-6">
-                    {mix.challenge_item.question_text}
-                  </p>
+                  <div className="flex items-start justify-between gap-2 mb-6">
+                    <p className="text-lg font-medium text-gray-900 flex-1">
+                      {mix.challenge_item.question_text}
+                    </p>
+                    <ReadAloudButton text={() => mix.challenge_item?.question_text || ''} />
+                  </div>
 
                   <div className="space-y-3 mb-6">
                     {(mix.challenge_item.options || []).map((option: string, idx: number) => {
@@ -973,9 +1083,59 @@ export default function DailyMixPage() {
                       animate={{ height: 'auto', opacity: 1 }}
                       className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6"
                     >
-                      <p className="text-sm font-semibold text-blue-700 mb-1">Explanation</p>
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <p className="text-sm font-semibold text-blue-700">Explanation</p>
+                        <ReadAloudButton text={() => mix.challenge_item?.explanation || ''} />
+                      </div>
                       <p className="text-sm text-blue-800">{mix.challenge_item.explanation}</p>
                     </motion.div>
+                  )}
+
+                  {/* Difficulty feedback — biases tomorrow's challenge band */}
+                  {challengeSubmitted && (
+                    <div className="mb-6 text-center">
+                      <p className="text-xs text-gray-500 mb-2">How did that feel?</p>
+                      <div className="flex justify-center gap-2">
+                        {([
+                          { v: 'too_easy',   label: 'Too easy',   icon: '🥱' },
+                          { v: 'just_right', label: 'Just right', icon: '👍' },
+                          { v: 'too_hard',   label: 'Too hard',   icon: '😤' },
+                        ] as const).map((opt) => {
+                          const active = difficultyFeedback === opt.v;
+                          return (
+                            <button
+                              key={opt.v}
+                              type="button"
+                              onClick={async () => {
+                                setDifficultyFeedback(opt.v);
+                                collectSignal({
+                                  user_id: userId || 'anonymous',
+                                  signal_type: 'difficulty_feel',
+                                  category: 'emotional',
+                                  source: 'daily_mix',
+                                  value: opt.v === 'too_easy' ? 0 : opt.v === 'just_right' ? 0.5 : 1,
+                                  metadata: { response: opt.v, step: 'challenge' },
+                                });
+                                try {
+                                  await fetch('/api/difficulty-bias', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ feedback: opt.v, context: 'daily_mix_challenge' }),
+                                  });
+                                } catch {}
+                              }}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+                                active
+                                  ? 'bg-primary-50 border-primary-400 text-primary-700'
+                                  : 'bg-white border-gray-200 text-gray-600 hover:border-primary-300'
+                              }`}
+                            >
+                              <span>{opt.icon}</span> <span>{opt.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
 
                   {!challengeSubmitted ? (
