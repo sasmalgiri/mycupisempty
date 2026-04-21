@@ -8,7 +8,14 @@ export async function GET(request: NextRequest) {
 
     const category = searchParams.get('category');
     const vark = searchParams.get('vark');
-    const subject = searchParams.get('subject');
+    const subjectRaw = searchParams.get('subject');
+
+    // Subject goes into a raw PostgREST filter string via .or(); reject anything
+    // that isn't a plain slug/UUID so a crafted value like "x},extra_filter" can't
+    // inject additional predicates into the query.
+    const subject = subjectRaw && /^[a-zA-Z0-9_-]{1,64}$/.test(subjectRaw)
+      ? subjectRaw
+      : null;
 
     let query = supabase
       .from('teaching_methods')

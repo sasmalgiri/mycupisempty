@@ -56,8 +56,17 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Route definitions
-  const studentRoutes = ['/dashboard', '/daily-mix', '/subjects', '/progress', '/achievements', '/assessment', '/settings', '/flashcards', '/guru', '/activities', '/challenges', '/methods', '/learning-dna', '/style-discovery', '/my-teams', '/lifecycle', '/pedagogy', '/me', '/habits', '/reflect', '/goals', '/parent', '/badges', '/path-discovery', '/live-quiz'];
+  // Route definitions. Keep this list in sync with folders under src/app/(dashboard)/
+  // — any (dashboard) route missing here silently bypasses auth + onboarding gates.
+  // /onboarding itself is included so unauthenticated users get redirected to /login
+  // instead of landing on a broken page where /api/onboarding-prefill 401s.
+  const studentRoutes = [
+    '/dashboard', '/daily-mix', '/subjects', '/progress', '/achievements', '/assessment',
+    '/settings', '/flashcards', '/guru', '/activities', '/challenges', '/methods',
+    '/learning-dna', '/style-discovery', '/my-teams', '/lifecycle', '/pedagogy', '/me',
+    '/habits', '/reflect', '/goals', '/parent', '/badges', '/path-discovery', '/live-quiz',
+    '/companions', '/circles', '/onboarding',
+  ];
   const teacherRoutes = ['/teacher'];
   const authRoutes = ['/login', '/signup'];
 
