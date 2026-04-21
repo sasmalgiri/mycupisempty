@@ -56,11 +56,11 @@ export async function GET() {
         .maybeSingle()
         .catch(() => ({ data: null })),
       supabase.from('profiles')
-        .select('full_name, language')
+        .select('full_name, language, character_goal')
         .eq('id', user.id)
         .single()
         .catch(() => ({ data: null })),
-      // Character goal from onboarding signal (most recent wins)
+      // Character goal from onboarding signal (fallback if profiles.character_goal isn't set yet)
       supabase.from('learner_signals')
         .select('metadata')
         .eq('user_id', user.id)
@@ -71,7 +71,10 @@ export async function GET() {
         .catch(() => ({ data: null })),
     ]);
 
-    const characterGoal: CharacterDim | null = goalRowResult?.data?.metadata?.dimension || null;
+    const characterGoal: CharacterDim | null =
+      (profileResult?.data?.character_goal as CharacterDim | null) ||
+      (goalRowResult?.data?.metadata?.dimension as CharacterDim | null) ||
+      null;
     const language = (profileResult?.data?.language as 'en' | 'hi' | 'bn') || 'en';
 
     const firstName = (profileResult?.data?.full_name || '').split(' ')[0] || 'there';
@@ -125,7 +128,11 @@ export async function GET() {
     const studiedToday = lastActivity === today;
     const greeting = greetingForTime();
 
-    if (!lastActivity) {
+    // Day-1 honesty: no companion has spoken yet, so don't pretend they have
+    const isFirstDay = sections.length === 0 && !lastActivity;
+    if (isFirstDay) {
+      headline = `${greeting}, ${firstName}. Day 1. Your companions will get to know you this week — start with anything that feels right.`;
+    } else if (!lastActivity) {
       headline = `${greeting}, ${firstName}. Fresh start today — pick any subject to begin.`;
     } else if (streak >= 7 && breakthroughCount > 0) {
       headline = `${greeting}, ${firstName}. Day ${streak} of your streak — your companions noticed real momentum yesterday.`;

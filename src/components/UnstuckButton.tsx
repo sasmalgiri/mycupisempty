@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface UnstuckButtonProps {
@@ -10,6 +10,8 @@ interface UnstuckButtonProps {
   currentModule?: string;
   masteryBand?: number;
   scaffoldLevel?: number;
+  /** Minimum time on page before showing — 0 to show immediately. Default 180s (3 min). */
+  appearAfterMs?: number;
 }
 
 export default function UnstuckButton({
@@ -18,10 +20,26 @@ export default function UnstuckButton({
   currentModule,
   masteryBand,
   scaffoldLevel,
+  appearAfterMs = 180000,
 }: UnstuckButtonProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [showContext, setShowContext] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  // Don't be intrusive on first load. Only surface after the user has spent real time on a topic,
+  // or immediately if they navigated here with stuck context already attached.
+  const hasContext = Boolean(topicId || subjectName || currentModule);
+  const [visible, setVisible] = useState(hasContext || appearAfterMs === 0);
+
+  useEffect(() => {
+    if (hasContext || appearAfterMs === 0) {
+      setVisible(true);
+      return;
+    }
+    setVisible(false);
+    const t = setTimeout(() => setVisible(true), appearAfterMs);
+    return () => clearTimeout(t);
+  }, [pathname, hasContext, appearAfterMs]);
 
   const buildGuruUrl = useCallback(() => {
     const params = new URLSearchParams({ unstuck: 'true' });
@@ -55,6 +73,8 @@ export default function UnstuckButton({
     }
     handleNavigate();
   };
+
+  if (!visible) return null;
 
   return (
     <div className="fixed bottom-6 right-24 z-50 flex flex-col items-end gap-2 mb-safe">

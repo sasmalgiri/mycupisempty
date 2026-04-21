@@ -185,9 +185,16 @@ export default function CompanionsDashboard() {
       <section>
         <h2 className="text-lg font-bold mb-3">Per-subject companions</h2>
         {companions.length === 0 ? (
-          <div className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl text-center">
-            <p className="text-sm text-gray-500 mb-3">No companion reports yet. Your companions activate as you start studying each subject.</p>
-            <Link href="/subjects" className="inline-block px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-semibold">Browse subjects →</Link>
+          <div className="p-8 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl text-center">
+            <div className="text-4xl mb-3">🤝</div>
+            <h3 className="font-bold text-lg mb-2">Your companions are waiting to meet you</h3>
+            <p className="text-sm text-gray-500 mb-4 max-w-md mx-auto">
+              Each subject has its own guide — Aryabhata for Math, Nambi Narayanan for Science, Tagore for English, and more. Start a subject to wake one up.
+            </p>
+            <div className="flex gap-2 justify-center flex-wrap">
+              <Link href="/daily-mix" className="inline-block px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-semibold">▶ Start Daily Mix</Link>
+              <Link href="/subjects" className="inline-block px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm">Or browse subjects</Link>
+            </div>
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

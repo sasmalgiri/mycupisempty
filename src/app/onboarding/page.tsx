@@ -6,7 +6,7 @@
  * and leave the student feeling seen, not judged.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LegalDisclaimer from '@/components/LegalDisclaimer';
@@ -41,6 +41,8 @@ const CHARACTER_GOALS: CharacterGoalOption[] = [
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
+const DRAFT_KEY = 'mcie_onboarding_draft';
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
@@ -53,6 +55,49 @@ export default function OnboardingPage() {
   const [characterGoal, setCharacterGoal] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Restore draft on mount + skip class/board step if already set from signup
+  useEffect(() => {
+    try {
+      const draft = localStorage.getItem(DRAFT_KEY);
+      if (draft) {
+        const d = JSON.parse(draft);
+        if (d.fullName) setFullName(d.fullName);
+        if (d.classLevel) setClassLevel(d.classLevel);
+        if (d.boardCode) setBoardCode(d.boardCode);
+        if (d.language) setLanguage(d.language);
+        if (d.easiestSubject) setEasiestSubject(d.easiestSubject);
+        if (d.toughestSubject) setToughestSubject(d.toughestSubject);
+        if (d.characterGoal) setCharacterGoal(d.characterGoal);
+        if (typeof d.step === 'number' && d.step >= 1 && d.step <= 6) setStep(d.step as Step);
+      }
+    } catch {}
+    // Prefill from profile (so we don't ask class+board twice if signup already captured them)
+    fetch('/api/onboarding-prefill')
+      .then(r => r.json())
+      .then(d => {
+        if (d?.profile) {
+          if (d.profile.full_name && !fullName) setFullName(d.profile.full_name);
+          if (d.profile.current_class) setClassLevel(d.profile.current_class);
+          if (d.profile.board_code) setBoardCode(d.profile.board_code);
+          if (d.profile.language) setLanguage(d.profile.language);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setHydrated(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist draft on every change
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        fullName, classLevel, boardCode, language, easiestSubject, toughestSubject, characterGoal, step,
+      }));
+    } catch {}
+  }, [hydrated, fullName, classLevel, boardCode, language, easiestSubject, toughestSubject, characterGoal, step]);
 
   const next = () => setStep((s) => (s < 6 ? ((s + 1) as Step) : s));
   const back = () => setStep((s) => (s > 1 ? ((s - 1) as Step) : s));
@@ -76,7 +121,10 @@ export default function OnboardingPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Could not save');
-      try { localStorage.setItem('mcie_locale', language); } catch {}
+      try {
+        localStorage.setItem('mcie_locale', language);
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {}
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
@@ -211,7 +259,10 @@ export default function OnboardingPage() {
               </div>
               <div className="flex justify-between">
                 <button type="button" onClick={back} className="px-4 py-2 text-gray-600 font-medium">← Back</button>
-                <button type="button" onClick={next} disabled={!easiestSubject} className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-lg font-semibold">Next →</button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => { setEasiestSubject(''); next(); }} className="px-3 py-2 text-gray-500 text-sm">Skip</button>
+                  <button type="button" onClick={next} disabled={!easiestSubject} className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-lg font-semibold">Next →</button>
+                </div>
               </div>
             </>
           )}
@@ -233,7 +284,10 @@ export default function OnboardingPage() {
               </div>
               <div className="flex justify-between">
                 <button type="button" onClick={back} className="px-4 py-2 text-gray-600 font-medium">← Back</button>
-                <button type="button" onClick={next} disabled={!toughestSubject} className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-lg font-semibold">Next →</button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => { setToughestSubject(''); next(); }} className="px-3 py-2 text-gray-500 text-sm">Skip</button>
+                  <button type="button" onClick={next} disabled={!toughestSubject} className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-lg font-semibold">Next →</button>
+                </div>
               </div>
             </>
           )}

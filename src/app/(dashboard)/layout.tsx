@@ -6,32 +6,59 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase';
 import UnstuckButton from '@/components/UnstuckButton';
 import LegalDisclaimer from '@/components/LegalDisclaimer';
+import LocaleSwitcher from '@/components/LocaleSwitcher';
+import ThemeToggle from '@/components/ThemeToggle';
 import { flushSignals } from '@/lib/learner-engine';
 
-const navItems = [
-  { href: '/dashboard', icon: '🏠', label: 'Dashboard' },
-  { href: '/daily-mix', icon: '🎯', label: 'Daily Mix' },
-  { href: '/me', icon: '🌟', label: 'My Development' },
-  // Learn
-  { href: '/subjects', icon: '📚', label: 'Subjects' },
-  { href: '/pedagogy', icon: '🧪', label: 'Learning Engine' },
-  { href: '/guru', icon: '🧙', label: 'AI Guru' },
-  { href: '/methods', icon: '📖', label: 'Methods' },
-  // Think
-  { href: '/activities', icon: '🎮', label: 'Activities' },
-  { href: '/challenges', icon: '🏆', label: 'Challenges' },
-  { href: '/flashcards', icon: '🃏', label: 'Flashcards' },
-  // Grow
-  { href: '/habits', icon: '📏', label: 'Habits' },
-  { href: '/reflect', icon: '🪞', label: 'Reflect' },
-  { href: '/goals', icon: '🎯', label: 'Goals' },
-  // Live & Path
-  { href: '/live-quiz', icon: '🎮', label: 'Live Quiz' },
-  { href: '/parent', icon: '👨‍👩‍👧', label: 'Parent View' },
-  // Legacy
-  { href: '/style-discovery', icon: '🧬', label: 'My Style' },
-  { href: '/progress', icon: '📊', label: 'Progress' },
-  { href: '/achievements', icon: '⭐', label: 'Achievements' },
+interface NavItem { href: string; icon: string; label: string; }
+interface NavGroup { label: string; items: NavItem[]; pinned?: boolean; }
+
+const navGroups: NavGroup[] = [
+  {
+    label: 'Start here',
+    pinned: true,
+    items: [
+      { href: '/dashboard', icon: '🏠', label: 'Dashboard' },
+      { href: '/daily-mix', icon: '🎯', label: 'Daily Mix' },
+      { href: '/guru', icon: '🧙', label: 'AI Guru' },
+    ],
+  },
+  {
+    label: 'Learn',
+    items: [
+      { href: '/subjects', icon: '📚', label: 'Subjects' },
+      { href: '/companions', icon: '🤝', label: 'Companions' },
+      { href: '/flashcards', icon: '🃏', label: 'Flashcards' },
+      { href: '/methods', icon: '📖', label: 'Methods' },
+      { href: '/pedagogy', icon: '🧪', label: 'Learning Engine' },
+    ],
+  },
+  {
+    label: 'Grow',
+    items: [
+      { href: '/me', icon: '🌟', label: 'My Development' },
+      { href: '/habits', icon: '📏', label: 'Habits' },
+      { href: '/reflect', icon: '🪞', label: 'Reflect' },
+      { href: '/goals', icon: '🎯', label: 'Goals' },
+      { href: '/progress', icon: '📊', label: 'Progress' },
+    ],
+  },
+  {
+    label: 'Play',
+    items: [
+      { href: '/activities', icon: '🎮', label: 'Activities' },
+      { href: '/challenges', icon: '🏆', label: 'Challenges' },
+      { href: '/live-quiz', icon: '📣', label: 'Live Quiz' },
+      { href: '/achievements', icon: '⭐', label: 'Achievements' },
+    ],
+  },
+  {
+    label: 'Family',
+    items: [
+      { href: '/parent', icon: '👨‍👩‍👧', label: 'Parent View' },
+      { href: '/style-discovery', icon: '🧬', label: 'My Style' },
+    ],
+  },
 ];
 
 export default function DashboardLayout({
@@ -42,6 +69,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Learn: true, Grow: false, Play: false, Family: false });
   const [userProfile, setUserProfile] = useState({
     name: '',
     class: 0,
@@ -149,32 +177,54 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="p-3">
-          {navItems.map(item => {
-            const isActive = pathname === item.href || 
-              (item.href !== '/dashboard' && pathname.startsWith(item.href));
-            
+        {/* Navigation — grouped into pillars, 'Start here' pinned open */}
+        <nav className="p-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+          {navGroups.map((group) => {
+            const open = openGroups[group.label] ?? (group.pinned || false);
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all ${
-                  isActive 
-                    ? 'bg-primary-50 text-primary-700 font-semibold' 
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <span className="text-xl">{item.icon}</span>
-                <span>{item.label}</span>
-                {isActive && (
-                  <div className="ml-auto w-2 h-2 bg-primary-500 rounded-full"></div>
-                )}
-              </Link>
+              <div key={group.label} className="mb-2">
+                <button
+                  type="button"
+                  onClick={() => !group.pinned && setOpenGroups((g) => ({ ...g, [group.label]: !open }))}
+                  aria-label={group.label}
+                  disabled={group.pinned}
+                  className={`w-full flex items-center justify-between px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${group.pinned ? 'text-primary-700' : 'text-gray-400 hover:text-gray-700 cursor-pointer'}`}
+                >
+                  <span>{group.label}</span>
+                  {!group.pinned && <span className="text-xs">{open ? '▼' : '▶'}</span>}
+                </button>
+                {open && group.items.map((item) => {
+                  const isActive = pathname === item.href ||
+                    (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg mb-0.5 text-sm transition-all ${
+                        isActive
+                          ? 'bg-primary-50 text-primary-700 font-semibold'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-base">{item.icon}</span>
+                      <span>{item.label}</span>
+                      {isActive && (
+                        <div className="ml-auto w-2 h-2 bg-primary-500 rounded-full" />
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
+
+        {/* Language + Theme toggles (above bottom actions) */}
+        <div className="absolute bottom-[124px] left-0 right-0 px-4 space-y-2 border-t border-gray-100 pt-3">
+          <LocaleSwitcher compact />
+          <ThemeToggle />
+        </div>
 
         {/* Bottom Actions */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
