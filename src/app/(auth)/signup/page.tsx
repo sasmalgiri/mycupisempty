@@ -101,8 +101,8 @@ export default function SignupPage() {
           })
           .eq('id', data.user.id);
 
-        // Redirect to assessment page
-        router.push('/assessment');
+        // Send new students to the onboarding flow
+        router.push('/onboarding');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create account');

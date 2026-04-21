@@ -107,20 +107,30 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
-    // VARK assessment check (only for students on student routes)
-    if (isStudent && isStudentRoute && !request.nextUrl.pathname.startsWith('/assessment')) {
-      const { data: learningStyle } = await supabase
-        .from('learning_styles')
-        .select('dominant_style')
-        .eq('user_id', user.id)
-        .single();
+    // Onboarding gate (replaces the old VARK-quiz gate).
+    // We never force a quiz — we observe behavior. But first-time students
+    // should see the short onboarding so a character goal is chosen.
+    // Students who have an `onboarded_at` can freely navigate the whole app.
+    if (
+      isStudent &&
+      isStudentRoute &&
+      !request.nextUrl.pathname.startsWith('/onboarding') &&
+      !request.nextUrl.pathname.startsWith('/assessment')     // allow explicit visit
+    ) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarded_at')
+          .eq('id', user.id)
+          .single();
 
-      // Redirect to assessment if not completed (no dominant_style set)
-      if (!learningStyle?.dominant_style) {
-        const skipAssessment = process.env.NEXT_PUBLIC_SKIP_ASSESSMENT === 'true';
-        if (!skipAssessment) {
-          return NextResponse.redirect(new URL('/assessment', request.url));
+        const skipOnboarding = process.env.NEXT_PUBLIC_SKIP_ASSESSMENT === 'true';
+        if (!skipOnboarding && profile && !profile.onboarded_at) {
+          return NextResponse.redirect(new URL('/onboarding', request.url));
         }
+      } catch {
+        // If the check fails (e.g., transient DB error), don't block — degrade
+        // to "let them navigate" rather than "trap them in a redirect loop".
       }
     }
   }

@@ -34,20 +34,20 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Check if user has completed VARK assessment
+      // Check if user has completed onboarding — if not, send them there first
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: learningStyle } = await (supabase as any)
-          .from('learning_styles')
-          .select('id')
-          .eq('user_id', user.id)
+        const { data: profile } = await (supabase as any)
+          .from('profiles')
+          .select('onboarded_at')
+          .eq('id', user.id)
           .single();
 
-        // Redirect to assessment if not completed
-        if (!learningStyle) {
-          return NextResponse.redirect(new URL('/assessment', requestUrl.origin));
+        // Redirect to onboarding if not yet onboarded
+        if (!profile?.onboarded_at) {
+          return NextResponse.redirect(new URL('/onboarding', requestUrl.origin));
         }
       }
 
