@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useGuruChat } from '@/hooks/upgrade';
 import { Slider, MethodCard, BuddyBubble } from '@/components/ui/upgrade';
@@ -51,7 +51,20 @@ const ALL_METHODS = [
   { code: 'chunking', name: 'Chunking', icon: '🧩', category: 'scientific' as const },
 ];
 
+// Next.js prerender requires any client component calling useSearchParams() to
+// sit inside a Suspense boundary — otherwise `next build` bails on /guru with
+// "Error occurred prerendering page /guru" and the whole deploy fails.
+// Split the page: a thin default export that provides the boundary, and the
+// real component inside.
 export default function GuruPage() {
+  return (
+    <Suspense fallback={<div className="h-[calc(100vh-64px)] flex items-center justify-center"><LoadingSpinner /></div>}>
+      <GuruPageInner />
+    </Suspense>
+  );
+}
+
+function GuruPageInner() {
   const {
     messages, loading, method, setMethod, difficulty, setDifficulty,
     isSocratic, setIsSocratic, isBeyondCurriculum, setIsBeyondCurriculum,
