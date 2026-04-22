@@ -7,6 +7,7 @@ import { CHARACTER_VALUES, getAgeFraming, getDailyPractice, getSourceQuote, type
 import { collectSignal, trackAnswer, trackTimeSpent, trackMood, trackFrustrationSignal, flushSignals, getMicroCheckIn, type MicroCheckIn } from '@/lib/learner-engine';
 import LearningModePill, { type ExplanationMode } from '@/components/LearningModePill';
 import ReadAloudButton from '@/components/ReadAloudButton';
+import NextStepGuide from '@/components/NextStepGuide';
 
 interface SpacedRepItem {
   id: string;
@@ -578,6 +579,10 @@ export default function DailyMixPage() {
                   </div>
                 );
               })}
+            </div>
+
+            <div className="mb-6 text-left">
+              <NextStepGuide context="post_daily_mix" />
             </div>
 
             <Link

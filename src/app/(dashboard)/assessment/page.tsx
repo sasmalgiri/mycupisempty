@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createBrowserClient } from '@/lib/supabase';
 import { collectSignal, trackMood, trackAnswer, trackPreferenceChoice } from '@/lib/learner-engine';
 import { CHARACTER_VALUES, getAgeFraming } from '@/lib/character-framework';
+import NextStepGuide from '@/components/NextStepGuide';
 
 // ============================================================
 // ASSESSMENT ACTIVITIES — disguised as play, captures real signals
@@ -272,6 +273,11 @@ export default function AssessmentPage() {
 
   const saveAndContinue = async () => {
     setSaving(true);
+    // Navigation is guaranteed even if every DB write fails or stalls — the
+    // previous version awaited the writes, so a slow network left saving=true
+    // forever and the button looked dead. And it never set profiles.onboarded_at,
+    // so the middleware onboarding gate bounced the student off /dashboard the
+    // moment they got there. Both fixed below.
     try {
       const supabase = createBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -280,28 +286,17 @@ export default function AssessmentPage() {
         // Derive initial preferences from behavioral signals
         const patternAccuracy = (profileSignals.pattern_accuracy as number) || 0.5;
         const patternSpeed = (profileSignals.pattern_avg_time as number) || 5000;
-        const speedData = profileSignals.speed_by_subject as Record<string, { correct: number; total: number; avgTime: number }> | undefined;
 
-        // Determine initial preference based on BEHAVIOR, not self-report
-        // Fast + accurate on patterns = analytical/visual learner
-        // Story choices = narrative/collaborative preference
-        // Explore: which sections they visited = visual vs text preference
         let visualScore = 30;
         let readingScore = 25;
         let auditoryScore = 20;
         let kinestheticScore = 25;
 
-        // Pattern performance → analytical/logical strength
-        if (patternAccuracy > 0.7 && patternSpeed < 4000) {
-          visualScore += 15;  // fast pattern recognition suggests visual processing
-        }
-
-        // Explore behavior → visual vs text preference
+        if (patternAccuracy > 0.7 && patternSpeed < 4000) visualScore += 15;
         if (exploredSections.has('visual')) visualScore += 10;
         if (exploredSections.has('text')) readingScore += 10;
         if (exploredSections.has('fact')) kinestheticScore += 5;
 
-        // Story choices → collaborative vs independent
         const storySignals = storyChoices;
         if (storySignals.includes('analytical_visual') || storySignals.includes('analytical_leader')) {
           readingScore += 10;
@@ -311,7 +306,6 @@ export default function AssessmentPage() {
           kinestheticScore += 10;
         }
 
-        // Normalize to 100
         const total = visualScore + auditoryScore + readingScore + kinestheticScore;
         const normalized = {
           visual: Math.round((visualScore / total) * 100),
@@ -319,15 +313,12 @@ export default function AssessmentPage() {
           reading: Math.round((readingScore / total) * 100),
           kinesthetic: Math.round((kinestheticScore / total) * 100),
         };
-
         const primary = Object.entries(normalized).sort((a, b) => b[1] - a[1])[0][0];
 
-        // Save to existing learning_styles table for backward compat.
-        // .upsert() returns the error in the result object instead of throwing,
-        // so we have to check it explicitly — otherwise a silently-failed save
-        // sends the student to /dashboard thinking their assessment was recorded.
+        // Fire-and-forget all three writes. We don't await — if the network
+        // stalls or a table is missing, navigation should still happen.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: stylesErr } = await (supabase.from('learning_styles') as any).upsert({
+        (supabase.from('learning_styles') as any).upsert({
           user_id: user.id,
           visual_score: normalized.visual,
           auditory_score: normalized.auditory,
@@ -335,12 +326,11 @@ export default function AssessmentPage() {
           kinesthetic_score: normalized.kinesthetic,
           dominant_style: primary,
           assessment_date: new Date().toISOString(),
-        });
-        if (stylesErr) console.error('Assessment learning_styles upsert failed:', stylesErr);
+        }).then((r: any) => { if (r?.error) console.error('learning_styles save:', r.error); },
+          (err: any) => console.error('learning_styles save:', err));
 
-        // Save the rich behavioral signals for the learner engine
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from('learner_profiles') as any).upsert({
+        (supabase.from('learner_profiles') as any).upsert({
           user_id: user.id,
           initial_mood: profileSignals.initial_mood,
           pattern_accuracy: profileSignals.pattern_accuracy,
@@ -352,20 +342,28 @@ export default function AssessmentPage() {
             sections: Array.from(exploredSections),
             time_seconds: exploreTimeSpent,
           },
-          profile_confidence: 0.3,  // initial — low confidence, will grow with usage
-          assessment_version: 2,    // v2 = behavioral assessment
+          profile_confidence: 0.3,
+          assessment_version: 2,
           assessed_at: new Date().toISOString(),
-        }).then(() => {}).catch(() => {
-          // Table might not exist yet — that's okay, signals are still in learning_styles
-        });
-      }
+        }).then(() => {}, () => { /* table may not exist — ignore */ });
 
-      router.push('/dashboard');
+        // Critical: mark the student as onboarded so the middleware gate lets
+        // them into /dashboard. Without this, router.push('/dashboard') below
+        // triggers an instant bounce to /onboarding and the student sees a
+        // different flow asking them to re-pick class/board.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase.from('profiles') as any)
+          .update({ onboarded_at: new Date().toISOString() })
+          .eq('id', user.id)
+          .then(() => {}, (err: any) => console.error('onboarded_at update:', err));
+      }
     } catch (error) {
-      console.error('Failed to save:', error);
-      router.push('/dashboard');
+      console.error('Assessment save failed (non-blocking):', error);
     } finally {
       setSaving(false);
+      // Navigate last, unconditionally. Small delay gives the browser a tick
+      // to commit the onboarded_at PATCH before the /dashboard request is made.
+      setTimeout(() => router.push('/dashboard'), 150);
     }
   };
 
@@ -925,6 +923,10 @@ export default function AssessmentPage() {
                   <strong>This is just the beginning.</strong> The more you learn with us,
                   the smarter your experience gets. We adapt to YOU — not the other way around.
                 </p>
+              </div>
+
+              <div className="mb-4">
+                <NextStepGuide context="post_assessment" />
               </div>
 
               <button
