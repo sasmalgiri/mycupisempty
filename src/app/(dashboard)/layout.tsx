@@ -29,6 +29,7 @@ const navGroups: NavGroup[] = [
       { href: '/subjects', icon: '📚', label: 'Subjects' },
       { href: '/companions', icon: '🤝', label: 'Companions' },
       { href: '/flashcards', icon: '🃏', label: 'Flashcards' },
+      { href: '/interleave', icon: '🧩', label: 'Mixed Practice' },
       { href: '/methods', icon: '📖', label: 'Methods' },
       { href: '/pedagogy', icon: '🧪', label: 'Learning Engine' },
     ],

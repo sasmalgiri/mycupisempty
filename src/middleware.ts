@@ -65,7 +65,7 @@ export async function middleware(request: NextRequest) {
     '/settings', '/flashcards', '/guru', '/activities', '/challenges', '/methods',
     '/learning-dna', '/style-discovery', '/my-teams', '/lifecycle', '/pedagogy', '/me',
     '/habits', '/reflect', '/goals', '/parent', '/badges', '/path-discovery', '/live-quiz',
-    '/companions', '/circles', '/onboarding',
+    '/companions', '/circles', '/onboarding', '/interleave',
   ];
   const teacherRoutes = ['/teacher'];
   const authRoutes = ['/login', '/signup'];

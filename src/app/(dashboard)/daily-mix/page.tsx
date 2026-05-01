@@ -8,6 +8,7 @@ import { collectSignal, trackAnswer, trackTimeSpent, trackMood, trackFrustration
 import LearningModePill, { type ExplanationMode } from '@/components/LearningModePill';
 import ReadAloudButton from '@/components/ReadAloudButton';
 import NextStepGuide from '@/components/NextStepGuide';
+import PretestCard, { type PretestQuestion } from '@/components/PretestCard';
 
 interface SpacedRepItem {
   id: string;
@@ -240,12 +241,40 @@ export default function DailyMixPage() {
   const [learningMode, setLearningMode] = useState<ExplanationMode>('step_by_step');
   const [difficultyFeedback, setDifficultyFeedback] = useState<'too_easy' | 'just_right' | 'too_hard' | null>(null);
 
+  // Pretest state — 2-question warmup before the New Concept step. Loaded
+  // lazily when the student reaches step 1 and there's a topic with MCQ
+  // questions on file. Once done (or skipped), we don't reshow this session.
+  const [pretestQuestions, setPretestQuestions] = useState<PretestQuestion[] | null>(null);
+  const [pretestDone, setPretestDone] = useState(false);
+  const [pretestLoading, setPretestLoading] = useState(false);
+
   useEffect(() => {
     fetch('/api/learning-mode')
       .then((r) => r.json())
       .then((d) => { if (d?.success && d?.mode) setLearningMode(d.mode); })
       .catch(() => {});
   }, []);
+
+  // Fetch pretest questions when the student arrives at the New Concept step
+  // and we have a topic_id. If the topic has fewer than 2 MCQs we silently
+  // skip the warmup — no harm done.
+  useEffect(() => {
+    if (currentStep !== 1 || pretestDone || pretestQuestions !== null || pretestLoading) return;
+    const topicId = session?.new_concept?.topic_id || session?.new_concept?.topics?.id;
+    if (!topicId) { setPretestDone(true); return; }
+    setPretestLoading(true);
+    fetch(`/api/pretest?topicId=${encodeURIComponent(topicId)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.success && Array.isArray(d.questions) && d.questions.length >= 2) {
+          setPretestQuestions(d.questions.slice(0, 2));
+        } else {
+          setPretestDone(true);  // not enough questions — skip silently
+        }
+      })
+      .catch(() => setPretestDone(true))
+      .finally(() => setPretestLoading(false));
+  }, [currentStep, session?.new_concept?.topic_id, session?.new_concept?.topics?.id, pretestDone, pretestQuestions, pretestLoading]);
   // Micro check-in state — appears between steps
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [currentCheckIn, setCurrentCheckIn] = useState<MicroCheckIn | null>(null);
@@ -845,6 +874,32 @@ export default function DailyMixPage() {
                   <p className="text-sm text-gray-500">Something new to explore today</p>
                 </div>
               </div>
+
+              {/* Pretest warm-up — appears once per session, BEFORE the topic
+                  reveal. Even when answered wrong, this primes encoding for the
+                  upcoming material (Pan, Sana et al. 2023, g=0.54 for items
+                  specifically pretested). */}
+              {!pretestDone && pretestQuestions && pretestQuestions.length >= 2 && mix.new_concept?.topics && (
+                <div className="mb-6">
+                  <PretestCard
+                    topicTitle={mix.new_concept.topics.title}
+                    questions={pretestQuestions}
+                    onComplete={(result) => {
+                      setPretestDone(true);
+                      collectSignal({
+                        user_id: userId || 'anonymous',
+                        signal_type: 'pretest_completed',
+                        category: 'performance',
+                        source: 'daily_mix',
+                        subject_id: mix.new_concept?.topics?.subject_id,
+                        value: result.total > 0 ? result.correct / result.total : 0,
+                        metadata: { ...result, topic_id: mix.new_concept?.topic_id },
+                      });
+                    }}
+                    onSkip={() => setPretestDone(true)}
+                  />
+                </div>
+              )}
 
               {mix.new_concept?.topics ? (
                 <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 mb-6">
