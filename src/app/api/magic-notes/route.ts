@@ -17,6 +17,7 @@
 
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { geminiGenerateJSON, isGeminiConfigured } from '@/lib/gemini';
 
 export async function GET(req: Request) {
   try {
@@ -55,10 +56,6 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     if (body.action === 'process' && body.uploadId) {
-      // Stub processor — runs entirely on data that's already in the row.
-      // For real OCR + concept extraction, swap the body of this branch
-      // with a call to your AI provider. Keeping this dependency-free here
-      // so the commit builds clean without API keys.
       const { data: row } = await supabase
         .from('notes_uploads')
         .select('*')
@@ -69,24 +66,54 @@ export async function POST(req: Request) {
 
       await supabase.from('notes_uploads').update({ status: 'processing' }).eq('id', row.id);
 
-      // Heuristic concept extraction from ocr_text if present (just splits
-      // on lines, keeps lines that look like concept candidates: contain
-      // a colon or are sentence-ish).
       const text: string = row.ocr_text || '';
-      const concepts = text
-        .split(/\n+/)
-        .map((l) => l.trim())
-        .filter((l) => l.length > 6 && (l.includes(':') || /[A-Z]\w/.test(l)))
-        .slice(0, 12);
+      let concepts: string[] = [];
+      let suggestedFlashcards: Array<{ front: string; back: string }> = [];
+      let aiUsed = false;
+
+      // Prefer Gemini extraction when configured. Falls back to heuristic
+      // line-splitting so this works without keys.
+      if (isGeminiConfigured() && text.trim()) {
+        const ai = await geminiGenerateJSON<{ concepts: string[]; flashcards: Array<{ front: string; back: string }> }>(
+          `These are class notes (raw, possibly messy) from an Indian K-12 student:
+
+---
+${text.slice(0, 4000)}
+---
+
+Extract:
+1. The 3-10 most important concepts as short bullet labels (max 80 chars each).
+2. 5-10 atomic flashcard pairs ({ front: a question or term, back: the concise answer/definition }). Front must NOT be the answer; back must be unambiguous.
+
+Return JSON: { "concepts": [...], "flashcards": [{ "front": "...", "back": "..." }, ...] }`,
+          { temperature: 0.4, maxOutputTokens: 1200 },
+        );
+        if (ai.ok && ai.data) {
+          concepts = Array.isArray(ai.data.concepts) ? ai.data.concepts.slice(0, 12).map((c) => String(c).slice(0, 120)) : [];
+          suggestedFlashcards = Array.isArray(ai.data.flashcards)
+            ? ai.data.flashcards.slice(0, 12).filter((f) => f?.front && f?.back).map((f) => ({ front: String(f.front).slice(0, 240), back: String(f.back).slice(0, 480) }))
+            : [];
+          aiUsed = true;
+        }
+      }
+
+      if (!aiUsed) {
+        // Heuristic fallback: lines containing a colon or that start capitalized.
+        concepts = text
+          .split(/\n+/)
+          .map((l) => l.trim())
+          .filter((l) => l.length > 6 && (l.includes(':') || /[A-Z]\w/.test(l)))
+          .slice(0, 12);
+      }
 
       await supabase.from('notes_uploads').update({
         extracted_concepts: concepts,
         status: text ? 'ready' : 'pending',
         ready_at: text ? new Date().toISOString() : null,
-        error: text ? null : 'No OCR text available — connect an OCR provider.',
+        error: text ? null : 'No OCR text available — paste text or connect an OCR provider.',
       }).eq('id', row.id);
 
-      return NextResponse.json({ success: true, concepts });
+      return NextResponse.json({ success: true, concepts, flashcards: suggestedFlashcards, source: aiUsed ? 'gemini' : 'heuristic' });
     }
 
     if (body.action === 'mark_ready' && body.uploadId) {

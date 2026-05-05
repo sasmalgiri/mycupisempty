@@ -22,6 +22,25 @@
 
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { geminiGenerateJSON, isGeminiConfigured } from '@/lib/gemini';
+
+const SUBJECTS_TO_REFRESH: Array<{ slug: string; topic: string }> = [
+  { slug: 'science',  topic: 'a recent (2025-2026) interesting development in science any K-12 student would find fascinating' },
+  { slug: 'math',     topic: 'a beautiful or unexpected math idea suitable for a K-12 student (real-world example or pattern)' },
+  { slug: 'english',  topic: 'a useful English-language skill, idiom, or word origin a K-12 student should know' },
+  { slug: 'social',   topic: 'a recent or surprising historical/social/geographical fact relevant to Indian K-12 curriculum' },
+];
+
+const WONDER_PROMPT_BY_CATEGORY: Record<string, string> = {
+  outer_space:      'a fascinating, well-established fact about space or astronomy',
+  deep_sea:         'a fascinating, well-established fact about the deep ocean or marine life',
+  tiny_worlds:      'a fascinating, well-established fact about microscopic life, viruses, or cells',
+  history_weird:    'a verifiable but surprising historical fact (no conspiracy theories)',
+  body_mysteries:   'a fascinating, well-established fact about the human body',
+  math_magic:       'an elegant or surprising mathematical pattern with a real-world tie-in',
+  tech_hacks:       'a fascinating, factual explanation of how a common technology works',
+  nature_engineers: 'a fascinating, well-established example of an animal or plant adaptation',
+};
 
 interface RunStat {
   source: string;
@@ -117,6 +136,101 @@ export async function GET(req: Request) {
           status: stat.status,
         });
       } catch { /* freshness_log optional */ }
+    }
+
+    // 3. Gemini content generation pass — only when configured. Generates a
+    //    handful of fresh wonder_facts and subject_blogs per run with proper
+    //    provenance so the registry stays alive between adapter releases.
+    if (isGeminiConfigured()) {
+      const aiStart = Date.now();
+      const aiStat: RunStat = { source: '__gemini_generation__', fetched: 0, inserted: 0, archived: 0, skipped: 0, errors: [], status: 'ok', durationMs: 0 };
+
+      // 3a. Wonder facts — one per category each day (max 8 inserts).
+      for (const [category, topicHint] of Object.entries(WONDER_PROMPT_BY_CATEGORY)) {
+        try {
+          const ai = await geminiGenerateJSON<{ hook: string; body: string; class_min: number; class_max: number; is_evergreen: boolean }>(
+            `Write ${topicHint}, suitable for an Indian K-12 student.
+
+Return JSON: { "hook": "<1-sentence grab, max 160 chars>", "body": "<2-3 short paragraphs, max 600 chars total, factual, no clickbait>", "class_min": <int 1-12, youngest grade who can grasp this>, "class_max": <int 1-12>, "is_evergreen": <true if the fact won't go stale, false otherwise> }`,
+            { temperature: 0.85, maxOutputTokens: 600 },
+          );
+          aiStat.fetched += 1;
+          if (ai.ok && ai.data?.hook && ai.data?.body) {
+            const { error } = await supabase.from('wonder_facts').insert({
+              category,
+              hook: ai.data.hook.slice(0, 160),
+              body: ai.data.body.slice(0, 1200),
+              class_min: Math.max(1, Math.min(12, Number(ai.data.class_min) || 6)),
+              class_max: Math.max(1, Math.min(12, Number(ai.data.class_max) || 10)),
+              is_evergreen: !!ai.data.is_evergreen,
+              language: 'en',
+              last_verified_at: new Date().toISOString(),
+            });
+            if (!error) aiStat.inserted += 1;
+            else { aiStat.skipped += 1; aiStat.errors.push(`wonder/${category}: ${error.message}`); }
+          } else {
+            aiStat.skipped += 1;
+            if (ai.error) aiStat.errors.push(`wonder/${category}: ${ai.error}`);
+          }
+        } catch (err: any) {
+          aiStat.errors.push(`wonder/${category}: ${err?.message || err}`);
+        }
+      }
+
+      // 3b. Subject blogs — one per subject (max 4 inserts).
+      for (const sub of SUBJECTS_TO_REFRESH) {
+        try {
+          const ai = await geminiGenerateJSON<{ title: string; body_md: string; class_min: number; class_max: number; reading_minutes: number }>(
+            `Write a 300-500 word kid-appropriate blog post about ${sub.topic}, for the Indian school subject "${sub.slug}".
+Tone: friendly, accurate, no fluff. Avoid news headlines you can't verify. Include 1-2 practical takeaways the student can use in class.
+
+Return JSON: { "title": "<title, max 100 chars>", "body_md": "<markdown body, 300-500 words>", "class_min": <int>, "class_max": <int>, "reading_minutes": <int 2-5> }`,
+            { temperature: 0.7, maxOutputTokens: 1200 },
+          );
+          aiStat.fetched += 1;
+          if (ai.ok && ai.data?.title && ai.data?.body_md) {
+            const slugBase = ai.data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
+            const slug = `${slugBase}-${Date.now().toString(36)}`;
+            const wordCount = ai.data.body_md.split(/\s+/).length;
+            const { error } = await supabase.from('subject_blogs').insert({
+              subject_slug: sub.slug,
+              title: ai.data.title.slice(0, 200),
+              slug,
+              body_md: ai.data.body_md.slice(0, 8000),
+              word_count: wordCount,
+              reading_minutes: Math.max(1, Math.min(8, Number(ai.data.reading_minutes) || 3)),
+              class_min: Math.max(1, Math.min(12, Number(ai.data.class_min) || 6)),
+              class_max: Math.max(1, Math.min(12, Number(ai.data.class_max) || 10)),
+              language: 'en',
+              last_verified_at: new Date().toISOString(),
+            });
+            if (!error) aiStat.inserted += 1;
+            else { aiStat.skipped += 1; aiStat.errors.push(`blog/${sub.slug}: ${error.message}`); }
+          } else {
+            aiStat.skipped += 1;
+            if (ai.error) aiStat.errors.push(`blog/${sub.slug}: ${ai.error}`);
+          }
+        } catch (err: any) {
+          aiStat.errors.push(`blog/${sub.slug}: ${err?.message || err}`);
+        }
+      }
+
+      aiStat.durationMs = Date.now() - aiStart;
+      if (aiStat.errors.length > 0) aiStat.status = aiStat.inserted > 0 ? 'partial' : 'failed';
+      overall.push(aiStat);
+
+      try {
+        await supabase.from('content_freshness_log').insert({
+          source_id: null,
+          items_fetched: aiStat.fetched,
+          items_inserted: aiStat.inserted,
+          items_archived: 0,
+          items_skipped: aiStat.skipped,
+          errors: aiStat.errors.length ? aiStat.errors.map((e) => ({ message: e })) : [],
+          duration_ms: aiStat.durationMs,
+          status: aiStat.status,
+        });
+      } catch { /* freshness log is best-effort */ }
     }
 
     return NextResponse.json({

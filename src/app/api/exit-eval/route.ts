@@ -21,6 +21,7 @@ import {
   statsFromSessions,
   type ExitEvalQuestion,
 } from '@/lib/exit-eval';
+import { geminiGenerateJSON, isGeminiConfigured } from '@/lib/gemini';
 
 const QUESTION_CACHE_HOURS = 24;
 
@@ -75,21 +76,53 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, question: q });
     }
 
-    // Fallback: deterministic generic question. AI generation hook lives here
-    // for later — wiring is left as a TODO so the build is dependency-free.
-    // The fallback is honest: it tells the student we don't have a custom
-    // transfer item for this exact topic yet.
+    // No authored items — try Gemini for an AI-generated transfer question.
     const { data: topic } = await supabase
       .from('topics')
-      .select('title, description')
+      .select('title, description, subject_id')
       .eq('id', topicId)
       .maybeSingle();
-
     const title = topic?.title || 'today\'s topic';
+
+    if (isGeminiConfigured()) {
+      const aiPrompt = `Topic: "${title}".
+${topic?.description ? `Brief: ${topic.description.slice(0, 400)}` : ''}
+
+Write ONE transfer question for a K-12 student who has just learned this topic. A "transfer" question presents a slightly DIFFERENT scenario than the lesson and asks the student to apply the same underlying idea. It must NOT be a recall question ("what did we learn?"). Keep it answerable in 1-3 sentences of free-form text.
+
+Return JSON:
+{
+  "prompt": "<the question>",
+  "expectedAnswer": "<a concise model answer, 1-2 sentences>",
+  "acceptableAnswers": ["<2-4 alternate phrasings or key-idea variants>"],
+  "kind": "transfer"
+}`;
+      const ai = await geminiGenerateJSON<{ prompt: string; expectedAnswer: string; acceptableAnswers: string[]; kind: string }>(aiPrompt, {
+        temperature: 0.6,
+        maxOutputTokens: 600,
+      });
+      if (ai.ok && ai.data?.prompt) {
+        const q: ExitEvalQuestion = {
+          id: `ai_${topicId}_${Date.now()}`,
+          prompt: ai.data.prompt.slice(0, 500),
+          expectedAnswer: (ai.data.expectedAnswer || '').slice(0, 500),
+          acceptableAnswers: Array.isArray(ai.data.acceptableAnswers) ? ai.data.acceptableAnswers.slice(0, 6).map((s: string) => String(s).slice(0, 300)) : [],
+          kind: 'transfer',
+          topicId,
+          source: 'ai',
+          generatedAt: new Date().toISOString(),
+        };
+        memCache.set(cacheKey, { q, expires: Date.now() + QUESTION_CACHE_HOURS * 3600 * 1000 });
+        return NextResponse.json({ success: true, question: q });
+      }
+    }
+
+    // Final fallback: deterministic generic application question. Honest about
+    // not having a custom transfer item for this topic yet.
     const fallback: ExitEvalQuestion = {
       id: `fallback_${topicId}`,
       prompt: `In your own words, explain how today's idea about "${title}" would apply to a slightly different situation than the one we worked through. Pick a real example from your life.`,
-      expectedAnswer: '',  // free-form; scoring will partial-credit on length+keywords
+      expectedAnswer: '',
       acceptableAnswers: [],
       kind: 'application',
       topicId,

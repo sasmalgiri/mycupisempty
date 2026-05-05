@@ -21,8 +21,18 @@
 
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { geminiGenerate, isGeminiConfigured } from '@/lib/gemini';
 
 const TOOLS = ['ai_resistant_assignment', 'misconception_radar', 'lesson_plan', 'group_jam_question'];
+
+const TEACHER_SYSTEM = `You are a curriculum specialist helping Indian K-12 teachers. Output is for a teacher to use as-is in class. Be concrete, classroom-ready, NCERT/state-board aligned where possible. Avoid generic platitudes. Keep markdown clean — headings, short bullets, no flourish.`;
+
+const TOOL_PROMPTS: Record<string, (p: any) => string> = {
+  ai_resistant_assignment: (p) => `Generate an AI-resistant homework assignment for class ${p.classLevel} ${p.subject} on the topic "${p.topic}". The assignment must require local-context evidence (a photo or observation from the student's own environment) that an LLM cannot fabricate, plus a hand-worked numerical or written component. Provide marking weights. Markdown only.`,
+  misconception_radar: (p) => `List the 3-5 most common student misconceptions about "${p.topic}" in class ${p.classLevel} ${p.subject}. For each, give: (1) what the wrong intuition is, (2) why students hold it, (3) a 1-sentence remediation move a teacher can run in class. Markdown.`,
+  lesson_plan: (p) => `Plan a 40-minute class ${p.classLevel} ${p.subject} lesson on "${p.topic}" using this evidence-based arc: 5 min prequestion warm-up; 10 min worked example with backward fading; 10 min interleaved practice across 3 sub-topics; 10 min group jam (whole-class question that surfaces a misconception); 5 min exit ticket (transfer question). Be specific about what the teacher actually does and says in each phase. Markdown.`,
+  group_jam_question: (p) => `Write one whole-class MCQ for class ${p.classLevel} ${p.subject} on "${p.topic}". Include the question and 4 options labelled (a)..(d). Make option (b) deliberately the most common student misconception. After the options, write a 2-sentence note for the teacher: which misconception (b) reveals and how to address it. Markdown.`,
+};
 
 interface ToolResult {
   output: string;
@@ -119,8 +129,21 @@ export async function POST(req: Request) {
     const tool = body.tool;
     if (!TOOLS.includes(tool)) return NextResponse.json({ error: 'Unknown tool' }, { status: 400 });
 
+    // Try Gemini first; fall back to deterministic stub on any failure so
+    // teachers never see an empty page.
+    if (isGeminiConfigured() && TOOL_PROMPTS[tool]) {
+      const prompt = TOOL_PROMPTS[tool](body.params || {});
+      const ai = await geminiGenerate(prompt, {
+        system: TEACHER_SYSTEM,
+        temperature: 0.7,
+        maxOutputTokens: 1200,
+      });
+      if (ai.ok && ai.text) {
+        return NextResponse.json({ success: true, output: ai.text, source: 'gemini' });
+      }
+    }
     const result = fallback(tool, body.params || {});
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ success: true, ...result, source: 'fallback' });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
