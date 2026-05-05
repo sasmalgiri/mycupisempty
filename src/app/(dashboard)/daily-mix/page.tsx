@@ -12,6 +12,7 @@ import PretestCard, { type PretestQuestion } from '@/components/PretestCard';
 import ActiveBreak from '@/components/ActiveBreak';
 import ExitEvalCard from '@/components/ExitEvalCard';
 import ArenaPlayer from '@/components/arena/ArenaPlayer';
+import TodaysPlanBanner from '@/components/TodaysPlanBanner';
 import { pickNextGame, type MinigameId } from '@/lib/arena-signals';
 
 interface SpacedRepItem {
@@ -722,6 +723,10 @@ export default function DailyMixPage() {
   return (
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
+        {/* Plan banner — only renders when student is enrolled. Surfaces today's
+            week, blocks, method, companion overlay, and adherence %. */}
+        <TodaysPlanBanner compact />
+
         {/* Progress bar */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">

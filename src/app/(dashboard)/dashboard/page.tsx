@@ -11,6 +11,7 @@ import CharacterGrowthCard from '@/components/CharacterGrowthCard';
 import FirstSessionCard from '@/components/FirstSessionCard';
 import NextStepGuide from '@/components/NextStepGuide';
 import DailyWonderCard from '@/components/DailyWonderCard';
+import TodaysPlanBanner from '@/components/TodaysPlanBanner';
 
 // Subject with progress for display
 interface SubjectWithProgress {
@@ -268,6 +269,9 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* First-session card — only appears for brand-new students */}
         <FirstSessionCard />
+
+        {/* Today's plan slice — only renders when student is enrolled in a course */}
+        <TodaysPlanBanner />
 
         {/* Context-aware next-step guide — proactive "what to do now" */}
         <div className="mb-6">
