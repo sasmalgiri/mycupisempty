@@ -120,6 +120,21 @@ export async function POST(req: Request) {
         .select()
         .single();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      // Fire-and-forget plan generation. We don't block the enrol response —
+      // if it fails the student can replan manually from the course page.
+      try {
+        const baseUrl = new URL(req.url).origin;
+        fetch(`${baseUrl}/api/plan`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            cookie: req.headers.get('cookie') || '',
+          },
+          body: JSON.stringify({ enrollmentId: row.id, action: 'generate' }),
+        }).catch((err) => console.warn('plan generation failed:', err));
+      } catch { /* non-blocking */ }
+
       return NextResponse.json({ success: true, enrollment: row });
     }
 
