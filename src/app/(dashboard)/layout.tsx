@@ -47,6 +47,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Play',
     items: [
+      { href: '/arena', icon: '🎯', label: 'The Arena' },
       { href: '/activities', icon: '🎮', label: 'Activities' },
       { href: '/challenges', icon: '🏆', label: 'Challenges' },
       { href: '/circles', icon: '🤝', label: 'Study Circles' },
