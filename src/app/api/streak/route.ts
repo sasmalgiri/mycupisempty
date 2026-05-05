@@ -130,9 +130,20 @@ export async function POST(req: Request) {
         .limit(1)
         .maybeSingle();
       if (!league) {
+        // Read last week's promoted_to_tier for this user to pick the new
+        // league's tier — falls back to 1 (Bronze) for first-time entrants.
+        const { data: lastStanding } = await supabase
+          .from('weekly_league_standings')
+          .select('promoted_to_tier, weekly_leagues!inner(week_start_date, cohort_key)')
+          .eq('user_id', user.id)
+          .eq('weekly_leagues.cohort_key', ck)
+          .order('joined_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const startTier = lastStanding?.promoted_to_tier || 1;
         const { data: created } = await supabase
           .from('weekly_leagues')
-          .insert({ tier: 1, week_start_date: week, cohort_key: ck })
+          .insert({ tier: startTier, week_start_date: week, cohort_key: ck })
           .select()
           .single();
         league = created;

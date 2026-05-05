@@ -142,6 +142,29 @@ export function tierMeta(tier: number) {
   return LEAGUE_TIERS.find((t) => t.tier === tier) || LEAGUE_TIERS[0];
 }
 
+/**
+ * Decide a student's tier change after a week ends.
+ *
+ *   rank 1-3        → promote (tier + 1, capped at 10)
+ *   rank ≥ size-2   → demote (tier - 1, floored at 1)
+ *   inactive (xp=0) → demote even from tier 1: stays tier 1 (no minus)
+ *   middle band     → stay
+ *
+ * Pure function so we can unit-test the rule.
+ */
+export function tierTransition(args: {
+  currentTier: number;
+  rank: number;            // 1-based rank within the league
+  cohortSize: number;      // total participants
+  weeklyXp: number;        // 0 means inactive
+}): { newTier: number; reason: 'promote' | 'demote' | 'stay' | 'inactive' } {
+  const t = Math.max(1, Math.min(10, Math.round(args.currentTier || 1)));
+  if (args.weeklyXp <= 0) return { newTier: t, reason: 'inactive' };
+  if (args.rank > 0 && args.rank <= 3) return { newTier: Math.min(10, t + 1), reason: 'promote' };
+  if (args.cohortSize > 4 && args.rank >= args.cohortSize - 2) return { newTier: Math.max(1, t - 1), reason: 'demote' };
+  return { newTier: t, reason: 'stay' };
+}
+
 export function cohortKey(args: { board: string | null; classLevel: number | null; language: string | null; schoolId?: string | null; section?: string | null }): string {
   const b = (args.board || 'cbse').toLowerCase().replace(/\s+/g, '_');
   const c = args.classLevel || 8;

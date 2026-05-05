@@ -65,6 +65,28 @@ export async function GET(request: NextRequest) {
       lastXPByUser[e.user_id] = (lastXPByUser[e.user_id] || 0) + (e.xp_amount || 0);
     }
 
+    // Pull session_evaluations to compute weekly accuracy per user — feeds
+    // the growth bonus so improvement matters, not just XP volume.
+    const userIdsForAcc = Array.from(new Set([...Object.keys(thisXPByUser), ...Object.keys(lastXPByUser)]));
+    const accThisByUser: Record<string, { sum: number; n: number }> = {};
+    const accLastByUser: Record<string, { sum: number; n: number }> = {};
+    if (userIdsForAcc.length > 0) {
+      const { data: evals } = await supabase
+        .from('session_evaluations')
+        .select('user_id, score, evaluated_at')
+        .in('user_id', userIdsForAcc)
+        .gte('evaluated_at', lastWeekStart.toISOString())
+        .lte('evaluated_at', end.toISOString());
+      for (const ev of evals || []) {
+        const t = new Date(ev.evaluated_at).getTime();
+        const bucket = t >= start.getTime() ? accThisByUser : accLastByUser;
+        const cur = bucket[ev.user_id] || { sum: 0, n: 0 };
+        cur.sum += Number(ev.score) || 0;
+        cur.n += 1;
+        bucket[ev.user_id] = cur;
+      }
+    }
+
     // Get participating users (opted in) + their display info, restricted to the
     // caller's cohort. Default cohort = same class + same board; cohort=school
     // narrows further to the caller's school_id (if they have one).
@@ -101,8 +123,9 @@ export async function GET(request: NextRequest) {
     for (const [uid, info] of optedInMap.entries()) {
       const weekly = thisXPByUser[uid] || 0;
       const prev = lastXPByUser[uid] || 0;
-      // Accuracy unavailable at this granularity — set to 0 for now, extend later
-      const growthBonus = computeGrowthBonus(weekly, prev, 0, 0);
+      const accThis = accThisByUser[uid] ? accThisByUser[uid].sum / Math.max(1, accThisByUser[uid].n) : 0;
+      const accLast = accLastByUser[uid] ? accLastByUser[uid].sum / Math.max(1, accLastByUser[uid].n) : 0;
+      const growthBonus = computeGrowthBonus(weekly, prev, accThis, accLast);
       rows.push({
         userId: uid,
         displayName: info.name,

@@ -266,7 +266,7 @@ export async function buildStudentState(supabase: any, userId: string): Promise<
     helpSeekingRate,
     prefersEncouragement: confidenceLevel < 5 || frustrationLevel > 3,
     prefersChallenge: overallAccuracy > 0.8 && frustrationLevel < 2,
-    bestTimeOfDay: 'afternoon', // TODO: compute from signal timestamps
+    bestTimeOfDay: deriveBestTimeOfDay(signals),
     avgSessionMinutes: estimatedAttention,
 
     activeMistakePatterns: mistakePatterns,
@@ -280,6 +280,31 @@ export async function buildStudentState(supabase: any, userId: string): Promise<
 // ============================================================
 // HELPERS
 // ============================================================
+
+/**
+ * Pick the time-of-day bucket where the student has been most active in the
+ * last ~30 days of signals. Quietly falls back to 'afternoon' when there's
+ * not enough data yet.
+ */
+function deriveBestTimeOfDay(signals: any[]): 'morning' | 'afternoon' | 'evening' | 'night' {
+  if (!signals || signals.length < 20) return 'afternoon';
+  const buckets: Record<string, number> = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+  for (const s of signals) {
+    if (!s?.created_at) continue;
+    const d = new Date(s.created_at);
+    const h = d.getHours();
+    if (h >= 5 && h < 12) buckets.morning++;
+    else if (h >= 12 && h < 17) buckets.afternoon++;
+    else if (h >= 17 && h < 22) buckets.evening++;
+    else buckets.night++;
+  }
+  let best: 'morning' | 'afternoon' | 'evening' | 'night' = 'afternoon';
+  let max = -1;
+  for (const k of Object.keys(buckets) as (keyof typeof buckets)[]) {
+    if (buckets[k] > max) { max = buckets[k]; best = k as any; }
+  }
+  return best;
+}
 
 function interpretMood(mood: string | undefined): string {
   if (!mood) return 'neutral';
