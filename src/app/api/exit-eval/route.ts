@@ -50,7 +50,36 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, question: cached.q });
     }
 
-    // Try authored transfer questions first — they're higher quality when present.
+    // Prefer the curated chapter_question_bank when this topicId belongs to a
+    // chapter we've populated. application + hots questions are the closest to
+    // a transfer-eval shape; fall back to short-answer if none.
+    // topicId in the curriculum schema = curriculum_topics.id; the qbank rows
+    // store chapter_id and may also store topic_id.
+    const { data: qbankRows } = await supabase
+      .from('chapter_question_bank')
+      .select('id, chapter_id, question_text, answer_text, options, correct_index, question_type, difficulty')
+      .or(`topic_id.eq.${topicId},chapter_id.eq.${topicId}`)
+      .in('question_type', ['application', 'hots', 'short', 'long'])
+      .in('difficulty', ['medium', 'hard'])
+      .limit(8);
+
+    if (qbankRows && qbankRows.length > 0) {
+      const pick = qbankRows[Math.floor(Math.random() * qbankRows.length)];
+      const q: ExitEvalQuestion = {
+        id: pick.id,
+        prompt: pick.question_text,
+        expectedAnswer: pick.answer_text,
+        acceptableAnswers: [],
+        kind: pick.question_type === 'application' || pick.question_type === 'hots' ? 'transfer' : 'application',
+        topicId,
+        source: 'authored',
+        generatedAt: new Date().toISOString(),
+      };
+      memCache.set(cacheKey, { q, expires: Date.now() + QUESTION_CACHE_HOURS * 3600 * 1000 });
+      return NextResponse.json({ success: true, question: q });
+    }
+
+    // Try the legacy authored MCQ pool as a secondary preference.
     const { data: authored } = await supabase
       .from('questions')
       .select('id, question_text, correct_answer, explanation, options')
