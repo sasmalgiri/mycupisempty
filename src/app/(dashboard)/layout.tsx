@@ -34,6 +34,7 @@ const navGroups: NavGroup[] = [
       { href: '/tricks', icon: '🪄', label: 'Tricks' },
       { href: '/blogs', icon: '📰', label: 'Blogs' },
       { href: '/magic-notes', icon: '🪄', label: 'Magic Notes' },
+      { href: '/scan', icon: '📷', label: 'Scan Textbook' },
       { href: '/methods', icon: '📖', label: 'Methods' },
       { href: '/pedagogy', icon: '🧪', label: 'Learning Engine' },
     ],
