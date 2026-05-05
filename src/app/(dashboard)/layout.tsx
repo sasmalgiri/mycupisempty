@@ -43,6 +43,7 @@ const navGroups: NavGroup[] = [
     label: 'Grow',
     items: [
       { href: '/me', icon: '🌟', label: 'My Development' },
+      { href: '/persona', icon: '🎭', label: 'My Persona' },
       { href: '/habits', icon: '📏', label: 'Habits' },
       { href: '/reflect', icon: '🪞', label: 'Reflect' },
       { href: '/goals', icon: '🎯', label: 'Goals' },
