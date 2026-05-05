@@ -11,8 +11,9 @@
  * forwarded to a WhatsApp group.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import CourseSettingsCard from '@/components/CourseSettingsCard';
 
 interface Block {
   subjectSlug: string;
@@ -123,6 +124,11 @@ export default function MyCoursePage() {
 
   const today = new Date().toISOString().split('T')[0];
   const weeks = plan?.weeks || [];
+  const planSubjects = useMemo(() => {
+    const seen = new Map<string, { slug: string; title: string }>();
+    for (const w of weeks) for (const b of w.blocks || []) if (!seen.has(b.subjectSlug)) seen.set(b.subjectSlug, { slug: b.subjectSlug, title: b.subjectSlug });
+    return Array.from(seen.values());
+  }, [weeks]);
   const currentIdx = weeks.findIndex((w) => today >= w.startDate && today <= w.endDate);
   const currentWeek = currentIdx >= 0 ? weeks[currentIdx] : weeks[0];
   const past4 = currentIdx >= 0 ? weeks.slice(Math.max(0, currentIdx - 4), currentIdx) : [];
@@ -221,6 +227,11 @@ export default function MyCoursePage() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* Plan tuning */}
+      {planSubjects.length > 0 && (
+        <CourseSettingsCard enrollmentId={enrollment.id} subjects={planSubjects} />
       )}
 
       {/* Parent artifact */}

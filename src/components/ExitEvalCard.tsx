@@ -40,6 +40,7 @@ export default function ExitEvalCard({ topicId, topicTitle, subjectId, companion
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [proposal, setProposal] = useState<{ newMode: string; reason: string } | null>(null);
+  const [encouragement, setEncouragement] = useState<{ text: string; tone: string } | null>(null);
 
   // Anti-cheat instrumentation
   const stageStartedRef = useRef<number>(0);
@@ -130,6 +131,19 @@ export default function ExitEvalCard({ topicId, topicTitle, subjectId, companion
       setResult(json.result);
       setProposal(json.modeProposal || null);
       setStage('feedback');
+      // Encouragement on weak scores — non-blocking
+      try {
+        const score = Number(json.result?.score) || 0;
+        const conf = (confidence ?? '').toString();
+        const trigger = (conf === 'sure' && score < 0.5) ? 'overconfident_wrong'
+          : score < 0.4 ? 'low_score'
+          : null;
+        if (trigger) {
+          fetch(`/api/encouragement?trigger=${trigger}`).then((r) => r.json()).then((d) => {
+            if (d?.line) setEncouragement({ text: d.line, tone: d.tone || 'warm' });
+          }).catch(() => {});
+        }
+      } catch { /* swallow */ }
       onComplete({
         score: json.result.score,
         correct: json.result.correct,
@@ -232,6 +246,11 @@ export default function ExitEvalCard({ topicId, topicTitle, subjectId, companion
 
       {stage === 'feedback' && result && (
         <div className="space-y-3">
+          {encouragement && (
+            <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800">
+              <p className="text-sm">💌 {encouragement.text}</p>
+            </div>
+          )}
           <div className={`p-3 rounded-lg ${result.correct ? 'bg-emerald-50 dark:bg-emerald-900/30' : 'bg-amber-50 dark:bg-amber-900/30'}`}>
             <p className="text-sm font-bold">
               {result.correct ? '✓ Correct' : '→ Not quite'} — score {(result.score * 100).toFixed(0)}/100

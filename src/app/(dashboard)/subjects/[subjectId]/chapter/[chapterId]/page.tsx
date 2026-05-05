@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import RichContent from '@/components/RichContent';
+import ChapterTricksSlot from '@/components/ChapterTricksSlot';
 
 interface Topic {
   id: string;
@@ -522,6 +523,11 @@ To divide fractions, multiply by the **reciprocal** (flip the second fraction)!
                     raw <script> or event handler in the content string would
                     execute. RichContent.escapeHtml() neutralizes that. */}
                 <RichContent text={currentTopic.content} className="markdown-content" />
+
+                {/* Tricks linked to this chapter — memory hooks rendered inline */}
+                <div className="not-prose mt-6">
+                  <ChapterTricksSlot chapterId={chapter.id} />
+                </div>
                 
                 {/* Navigation Buttons */}
                 <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
