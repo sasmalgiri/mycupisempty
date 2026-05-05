@@ -18,11 +18,14 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { start, end } = currentWeekBoundaries();
+    const url = new URL(request.url);
+    const cohortMode = url.searchParams.get('cohort') || 'class_board'; // 'class_board' | 'school'
 
-    // Check opt-in status from user_stats
+    // Check opt-in status from user_stats. Also pull cohort key fields so the
+    // league filters to peers in the same class+board (or same school).
     const { data: myProfile } = await supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, current_class, board_code, school_id')
       .eq('id', user.id)
       .single();
 
@@ -62,12 +65,26 @@ export async function GET(request: NextRequest) {
       lastXPByUser[e.user_id] = (lastXPByUser[e.user_id] || 0) + (e.xp_amount || 0);
     }
 
-    // Get participating users (opted in) + their display info
+    // Get participating users (opted in) + their display info, restricted to the
+    // caller's cohort. Default cohort = same class + same board; cohort=school
+    // narrows further to the caller's school_id (if they have one).
     const participatingUserIds = Object.keys(thisXPByUser);
+    let cohortIds: string[] = [];
+    if (participatingUserIds.length > 0) {
+      let cohortQ = supabase
+        .from('profiles')
+        .select('id')
+        .in('id', participatingUserIds);
+      if (myProfile?.current_class) cohortQ = cohortQ.eq('current_class', myProfile.current_class);
+      if (myProfile?.board_code) cohortQ = cohortQ.eq('board_code', myProfile.board_code);
+      if (cohortMode === 'school' && myProfile?.school_id) cohortQ = cohortQ.eq('school_id', myProfile.school_id);
+      const { data: cohortRows } = await cohortQ;
+      cohortIds = (cohortRows || []).map((r: any) => r.id);
+    }
     const { data: participants } = await supabase
       .from('league_participation')
       .select('user_id, display_name, badge_emoji, opted_in')
-      .in('user_id', participatingUserIds.length > 0 ? participatingUserIds : ['__none__']);
+      .in('user_id', cohortIds.length > 0 ? cohortIds : ['__none__']);
 
     const optedInMap = new Map<string, { name: string; badge: string }>();
     for (const p of participants || []) {

@@ -22,10 +22,11 @@ export async function GET(req: Request) {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    // Fetch profile for cohort assignment context
+    // Fetch profile for cohort assignment context — school_id + section narrow
+    // the cohort to the student's classroom when set.
     const { data: profile } = await supabase
       .from('profiles')
-      .select('current_class, board_code, language')
+      .select('current_class, board_code, language, school_id, school_section')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -33,6 +34,8 @@ export async function GET(req: Request) {
       board: profile?.board_code,
       classLevel: profile?.current_class,
       language: profile?.language,
+      schoolId: profile?.school_id,
+      section: profile?.school_section,
     });
     const week = thisWeekMonday();
 
@@ -104,13 +107,15 @@ export async function POST(req: Request) {
       // Look up profile + ensure standing for this week's cohort
       const { data: profile } = await supabase
         .from('profiles')
-        .select('current_class, board_code, language')
+        .select('current_class, board_code, language, school_id, school_section')
         .eq('id', user.id)
         .maybeSingle();
       const ck = cohortKey({
         board: profile?.board_code,
         classLevel: profile?.current_class,
         language: profile?.language,
+        schoolId: profile?.school_id,
+        section: profile?.school_section,
       });
       const week = thisWeekMonday();
 

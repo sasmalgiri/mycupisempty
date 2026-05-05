@@ -142,10 +142,19 @@ export function tierMeta(tier: number) {
   return LEAGUE_TIERS.find((t) => t.tier === tier) || LEAGUE_TIERS[0];
 }
 
-export function cohortKey(args: { board: string | null; classLevel: number | null; language: string | null }): string {
+export function cohortKey(args: { board: string | null; classLevel: number | null; language: string | null; schoolId?: string | null; section?: string | null }): string {
   const b = (args.board || 'cbse').toLowerCase().replace(/\s+/g, '_');
   const c = args.classLevel || 8;
   const l = (args.language || 'en').toLowerCase();
+  // School-classroom cohort: when both school_id and class are known, the
+  // cohort narrows to that school's class — students compete with their actual
+  // classmates rather than an anonymous board-wide pool. Falls back to global
+  // class+board+language cohort.
+  if (args.schoolId) {
+    const s = args.schoolId.replace(/-/g, '').slice(0, 12);
+    const sec = (args.section || '').toLowerCase().slice(0, 4);
+    return `school-${s}-class-${c}${sec ? `-${sec}` : ''}`;
+  }
   return `${b}-class-${c}-${l}`;
 }
 

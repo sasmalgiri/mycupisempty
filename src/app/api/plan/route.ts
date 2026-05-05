@@ -15,7 +15,7 @@ import { generatePlan, type PlanInput } from '@/lib/plan-generator';
 async function loadPlanInput(supabase: any, userId: string, enrollmentId: string): Promise<PlanInput | null> {
   const { data: enrollment } = await supabase
     .from('course_enrollments')
-    .select('id, course_id, start_date, weekly_minutes_target')
+    .select('id, course_id, start_date, weekly_minutes_target, pace_multipliers')
     .eq('id', enrollmentId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -44,7 +44,7 @@ async function loadPlanInput(supabase: any, userId: string, enrollmentId: string
 
   const { data: persona } = await supabase
     .from('persona_profiles')
-    .select('daily_study_minutes_available, best_study_time, energy_after_school, effort_tolerance, perfectionism')
+    .select('daily_study_minutes_available, best_study_time, energy_after_school, effort_tolerance, perfectionism, career_path')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -93,7 +93,9 @@ async function loadPlanInput(supabase: any, userId: string, enrollmentId: string
     enrollment: {
       startDate: enrollment.start_date,
       weeklyMinutesTarget: enrollment.weekly_minutes_target,
+      paceMultipliers: enrollment.pace_multipliers || {},
     },
+    careerPath: persona?.career_path || null,
   };
 }
 

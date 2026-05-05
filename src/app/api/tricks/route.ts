@@ -27,6 +27,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const offer = url.searchParams.get('offer') === '1';
     const topicId = url.searchParams.get('topicId');
+    const chapterId = url.searchParams.get('chapterId');
     const subject = url.searchParams.get('subject');
     const category = url.searchParams.get('category');
     const klass = Math.max(1, Math.min(12, Number(url.searchParams.get('class') || 8)));
@@ -73,6 +74,11 @@ export async function GET(req: Request) {
 
     if (category && CATEGORIES.includes(category)) q = q.eq('category', category);
     if (subject) q = q.eq('subject_slug', subject);
+    // Chapter linkage — tricks.related_topic_ids stores ids that may be either
+    // topic ids or chapter ids (the column predates the topic/chapter split).
+    // The v_chapter_trick_links view treats them as chapter ids; we mirror that here.
+    if (chapterId) q = q.contains('related_topic_ids', [chapterId]);
+    if (topicId && !chapterId) q = q.contains('related_topic_ids', [topicId]);
 
     const { data: rows } = await q.order('helpful_count', { ascending: false }).limit(limit);
     return NextResponse.json({ success: true, items: rows || [] });

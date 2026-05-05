@@ -85,7 +85,11 @@ export interface PlanInput {
   enrollment: {
     startDate: string;                // 'YYYY-MM-DD'
     weeklyMinutesTarget: number;
+    /** Per-subject pace multiplier (0.3..2.0). Subject share is multiplied by this. */
+    paceMultipliers?: Record<string, number>;
   };
+  /** Optional career-path emphasis from persona_profiles.career_path. */
+  careerPath?: string | null;
 }
 
 export interface PlanWeek {
@@ -116,7 +120,7 @@ export interface Plan {
   weeks: PlanWeek[];
 }
 
-const GENERATOR_VERSION = 'v1.0';
+const GENERATOR_VERSION = 'v1.1';   // adds pace multipliers + career emphasis
 const MIN_SUBJECT_SHARE = 0.10;          // floor share of weekly minutes per subject
 const LIGHT_WEEK_FACTOR = 0.30;          // multiplier for holiday-heavy weeks
 const REVISION_TAIL_WEEKS = 4;           // last N weeks reserved for revision
@@ -189,15 +193,37 @@ function orderChapters(chapters: PlanInput['chapters']): PlanInput['chapters'] {
   return out;
 }
 
+// Per-career subject emphasis. A career boost applies a +0.1 / -0.05 multiplier
+// to the corresponding subject's raw share before the floor + renormalize step.
+const CAREER_EMPHASIS: Record<string, Record<string, number>> = {
+  doctor:           { life_science: 1.30, physical_science: 1.20, science: 1.20, math: 1.10, english: 1.05 },
+  engineer:         { math: 1.30, physical_science: 1.25, science: 1.20, english: 1.05 },
+  civil_services:   { history: 1.25, geography: 1.25, social: 1.25, english: 1.15, bengali: 1.10 },
+  arts_humanities:  { english: 1.25, bengali: 1.25, history: 1.20, geography: 1.10 },
+  commerce:         { math: 1.25, english: 1.10, social: 1.10 },
+  sports:           { english: 1.05, bengali: 1.05 },
+  creative:         { english: 1.20, bengali: 1.20 },
+  unsure:           {},
+};
+
 /**
  * Distribute subject minutes across the year. Each subject gets a share
- * proportional to its expected_hours_per_year, with a MIN_SUBJECT_SHARE floor.
+ * proportional to its expected_hours_per_year, modified by per-subject pace
+ * multipliers and career emphasis, with a MIN_SUBJECT_SHARE floor.
  */
-function subjectShares(subjects: PlanInput['subjects']): Record<string, number> {
+function subjectShares(
+  subjects: PlanInput['subjects'],
+  paceMultipliers: Record<string, number> = {},
+  careerPath: string | null = null,
+): Record<string, number> {
+  const careerTable = careerPath ? (CAREER_EMPHASIS[careerPath] || {}) : {};
   const total = subjects.reduce((s, x) => s + (x.expectedHoursPerYear || 60), 0);
   const raw: Record<string, number> = {};
   for (const s of subjects) {
-    raw[s.id] = (s.expectedHoursPerYear || 60) / Math.max(1, total);
+    const baseShare = (s.expectedHoursPerYear || 60) / Math.max(1, total);
+    const pace = paceMultipliers[s.subjectSlug] ?? 1.0;
+    const career = careerTable[s.subjectSlug] ?? 1.0;
+    raw[s.id] = baseShare * Math.max(0.3, Math.min(2.0, pace)) * career;
   }
   // Apply floor and re-normalize.
   let remaining = 1;
@@ -216,7 +242,7 @@ function subjectShares(subjects: PlanInput['subjects']): Record<string, number> 
 }
 
 export function generatePlan(input: PlanInput): Plan {
-  const { course, subjects, chapters, persona, calendars, enrollment } = input;
+  const { course, subjects, chapters, persona, calendars, enrollment, careerPath } = input;
   const totalWeeks = course.expectedWeeks || 40;
   const weeks: PlanWeek[] = [];
 
@@ -239,7 +265,7 @@ export function generatePlan(input: PlanInput): Plan {
   for (const s of subjects) cursors[s.id] = 0;
 
   // Subject share of daily minutes
-  const shares = subjectShares(subjects);
+  const shares = subjectShares(subjects, enrollment.paceMultipliers, careerPath);
 
   // Generate week-by-week
   for (let w = 1; w <= totalWeeks; w++) {
