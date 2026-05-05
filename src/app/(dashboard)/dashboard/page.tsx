@@ -14,6 +14,8 @@ import DailyWonderCard from '@/components/DailyWonderCard';
 import TodaysPlanBanner from '@/components/TodaysPlanBanner';
 import StuckDetectorBanner from '@/components/StuckDetectorBanner';
 import ExamCountdownCard from '@/components/ExamCountdownCard';
+import TopperScoreTile from '@/components/TopperScoreTile';
+import YesterdaysMistakeCard from '@/components/YesterdaysMistakeCard';
 
 // Subject with progress for display
 interface SubjectWithProgress {
@@ -277,6 +279,12 @@ export default function DashboardPage() {
 
         {/* Exam countdown — surfaces next summative window + syllabus coverage */}
         <ExamCountdownCard />
+
+        {/* Topper score — single 0-100 headline */}
+        <TopperScoreTile />
+
+        {/* First card every day: redo yesterday's worst answer */}
+        <YesterdaysMistakeCard />
 
         {/* Today's plan slice — only renders when student is enrolled in a course */}
         <TodaysPlanBanner />

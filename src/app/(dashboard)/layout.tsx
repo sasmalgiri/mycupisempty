@@ -19,6 +19,7 @@ const navGroups: NavGroup[] = [
     pinned: true,
     items: [
       { href: '/dashboard', icon: '🏠', label: 'Dashboard' },
+      { href: '/topper-routine', icon: '🏆', label: 'Topper Routine' },
       { href: '/daily-mix', icon: '🎯', label: 'Daily Mix' },
       { href: '/guru', icon: '🧙', label: 'AI Guru' },
     ],
@@ -37,6 +38,9 @@ const navGroups: NavGroup[] = [
       { href: '/blogs', icon: '📰', label: 'Blogs' },
       { href: '/magic-notes', icon: '🪄', label: 'Magic Notes' },
       { href: '/scan', icon: '📷', label: 'Scan Textbook' },
+      { href: '/handwriting', icon: '✍️', label: 'Handwriting' },
+      { href: '/spelling', icon: '📝', label: 'Spelling Drill' },
+      { href: '/school-papers', icon: '📚', label: 'School Papers' },
       { href: '/methods', icon: '📖', label: 'Methods' },
       { href: '/pedagogy', icon: '🧪', label: 'Learning Engine' },
     ],

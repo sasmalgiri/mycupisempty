@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import RichContent from '@/components/RichContent';
 import ChapterTricksSlot from '@/components/ChapterTricksSlot';
+import ConceptSheetView from '@/components/ConceptSheetView';
+import ChapterAudioButton from '@/components/ChapterAudioButton';
 
 interface Topic {
   id: string;
@@ -522,7 +524,15 @@ To divide fractions, multiply by the **reciprocal** (flip the second fraction)!
                     into dangerouslySetInnerHTML without HTML-escaping, so any
                     raw <script> or event handler in the content string would
                     execute. RichContent.escapeHtml() neutralizes that. */}
+                <div className="flex items-center justify-end mb-2 not-prose">
+                  <ChapterAudioButton text={currentTopic.content} />
+                </div>
                 <RichContent text={currentTopic.content} className="markdown-content" />
+
+                {/* Concept sheet — one-page must-know summary */}
+                <div className="not-prose mt-6">
+                  <ConceptSheetView chapterId={chapter.id} />
+                </div>
 
                 {/* Tricks linked to this chapter — memory hooks rendered inline */}
                 <div className="not-prose mt-6">
