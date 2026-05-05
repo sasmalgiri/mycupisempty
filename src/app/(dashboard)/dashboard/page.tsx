@@ -10,6 +10,7 @@ import DailyBriefing from '@/components/DailyBriefing';
 import CharacterGrowthCard from '@/components/CharacterGrowthCard';
 import FirstSessionCard from '@/components/FirstSessionCard';
 import NextStepGuide from '@/components/NextStepGuide';
+import DailyWonderCard from '@/components/DailyWonderCard';
 
 // Subject with progress for display
 interface SubjectWithProgress {
@@ -272,6 +273,9 @@ export default function DashboardPage() {
         <div className="mb-6">
           <NextStepGuide context="dashboard" />
         </div>
+
+        {/* Daily Wonder — curiosity gateway, deterministic per user per day */}
+        <DailyWonderCard />
 
         {/* Daily Briefing — companions speak first */}
         <DailyBriefing />
