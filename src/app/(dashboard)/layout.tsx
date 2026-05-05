@@ -27,6 +27,7 @@ const navGroups: NavGroup[] = [
     label: 'Learn',
     items: [
       { href: '/courses', icon: '🎓', label: 'Courses' },
+      { href: '/courses/my', icon: '📈', label: 'My Course' },
       { href: '/subjects', icon: '📚', label: 'Subjects' },
       { href: '/companions', icon: '🤝', label: 'Companions' },
       { href: '/flashcards', icon: '🃏', label: 'Flashcards' },
