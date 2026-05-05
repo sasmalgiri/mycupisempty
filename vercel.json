@@ -8,8 +8,17 @@
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/refresh-content/route.ts": {
+      "maxDuration": 300
     }
   },
+  "crons": [
+    {
+      "path": "/api/refresh-content",
+      "schedule": "0 22 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
