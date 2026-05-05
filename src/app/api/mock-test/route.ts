@@ -18,7 +18,10 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { answersMatch } from '@/lib/exit-eval';
 
-const TYPE_PROPORTIONS: Record<string, number> = {
+// Madhyamik / upper-class fallback shape. Class-aware shapes live in
+// public.exam_shape_profiles (seeded by 031); we fetch that first and fall
+// back to this when no profile row exists.
+const FALLBACK_TYPE_PROPORTIONS: Record<string, number> = {
   mcq: 0.25,
   very_short: 0.15,
   short: 0.25,
@@ -27,8 +30,34 @@ const TYPE_PROPORTIONS: Record<string, number> = {
   hots: 0.05,
 };
 
-const DEFAULT_TOTAL_MARKS = 70;
-const DEFAULT_DURATION_MIN = 90;
+const FALLBACK_TOTAL_MARKS = 70;
+const FALLBACK_DURATION_MIN = 90;
+
+async function loadExamShape(supabase: any, boardCode: string, classLevel: number, examKind = 'mock_default') {
+  const { data } = await supabase
+    .from('exam_shape_profiles')
+    .select('total_marks, duration_minutes, type_proportions')
+    .eq('board_code', boardCode)
+    .eq('class_level', classLevel)
+    .eq('exam_kind', examKind)
+    .maybeSingle();
+  if (data) {
+    return {
+      totalMarks: data.total_marks,
+      durationMinutes: data.duration_minutes,
+      proportions: data.type_proportions as Record<string, number>,
+    };
+  }
+  // Fallback: scale by class level
+  const scale = Math.max(0.4, Math.min(1.3, classLevel / 10));
+  return {
+    totalMarks: Math.round(FALLBACK_TOTAL_MARKS * scale),
+    durationMinutes: Math.round(FALLBACK_DURATION_MIN * scale),
+    proportions: classLevel <= 5
+      ? { mcq: 0.30, fill_blank: 0.25, very_short: 0.25, short: 0.20 }
+      : FALLBACK_TYPE_PROPORTIONS,
+  };
+}
 
 export async function GET(req: Request) {
   try {
@@ -76,8 +105,8 @@ export async function POST(req: Request) {
     if (body.action === 'create') {
       const subjectSlug = String(body.subjectSlug || '').trim();
       if (!subjectSlug) return NextResponse.json({ error: 'subjectSlug required' }, { status: 400 });
-      const totalMarks = Math.max(20, Math.min(100, Number(body.totalMarks) || DEFAULT_TOTAL_MARKS));
-      const durationMinutes = Math.max(20, Math.min(180, Number(body.durationMinutes) || DEFAULT_DURATION_MIN));
+      const examKind = ['summative_1', 'summative_2', 'summative_3', 'half_yearly', 'final_exam', 'mock_default'].includes(body.examKind)
+        ? body.examKind : 'mock_default';
 
       // Find the student's active enrollment to figure out board+class+language
       const { data: enrollment } = await supabase
@@ -90,6 +119,11 @@ export async function POST(req: Request) {
         .maybeSingle();
       if (!enrollment) return NextResponse.json({ error: 'No active enrollment' }, { status: 400 });
       const course = enrollment.curriculum_courses;
+      // Pull the class-aware shape now that we know the class/board.
+      const shape = await loadExamShape(supabase, course.board_code, course.class_level, examKind);
+      const totalMarks = body.totalMarks ? Math.max(20, Math.min(100, Number(body.totalMarks))) : shape.totalMarks;
+      const durationMinutes = body.durationMinutes ? Math.max(20, Math.min(180, Number(body.durationMinutes))) : shape.durationMinutes;
+      const TYPE_PROPORTIONS = shape.proportions;
 
       // Pull the subject_class row + chapters
       const { data: scc } = await supabase
@@ -102,11 +136,20 @@ export async function POST(req: Request) {
         .maybeSingle();
       if (!scc) return NextResponse.json({ error: 'Subject not registered for this course' }, { status: 404 });
 
-      // Pull qbank questions for this subject's chapters
-      const { data: chapters } = await supabase
+      // Pull qbank questions for this subject's chapters. When examKind is a
+      // summative window, restrict to chapters in that window (or carry-over).
+      const summativeMap: Record<string, number | null> = {
+        summative_1: 1, summative_2: 2, summative_3: 3, final_exam: 3, half_yearly: 2, mock_default: null,
+      };
+      const targetSummative = summativeMap[examKind] ?? null;
+      let chapterQuery = supabase
         .from('curriculum_chapters')
-        .select('id')
+        .select('id, summative_no')
         .eq('subject_class_id', scc.id);
+      if (targetSummative !== null) {
+        chapterQuery = chapterQuery.or(`summative_no.eq.${targetSummative},summative_no.is.null`);
+      }
+      const { data: chapters } = await chapterQuery;
       const chapterIds = (chapters || []).map((c: any) => c.id);
       if (chapterIds.length === 0) return NextResponse.json({ error: 'No chapters seeded for this subject' }, { status: 404 });
 

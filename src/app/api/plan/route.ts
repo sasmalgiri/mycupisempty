@@ -12,7 +12,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { generatePlan, type PlanInput } from '@/lib/plan-generator';
 
-async function loadPlanInput(supabase: any, userId: string, enrollmentId: string): Promise<PlanInput | null> {
+async function loadPlanInput(supabase: any, userId: string, enrollmentId: string, targetSummative?: 1 | 2 | 3 | null): Promise<PlanInput | null> {
   const { data: enrollment } = await supabase
     .from('course_enrollments')
     .select('id, course_id, start_date, weekly_minutes_target, pace_multipliers')
@@ -38,7 +38,7 @@ async function loadPlanInput(supabase: any, userId: string, enrollmentId: string
   const { data: chapters } = subjectIds.length
     ? await supabase
         .from('curriculum_chapters')
-        .select('id, subject_class_id, chapter_no, title_en, season_hint, expected_hours, prereq_chapter_ids, exam_weight_pct, maturity_band')
+        .select('id, subject_class_id, chapter_no, title_en, season_hint, expected_hours, prereq_chapter_ids, exam_weight_pct, maturity_band, summative_no')
         .in('subject_class_id', subjectIds)
     : { data: [] };
 
@@ -77,6 +77,7 @@ async function loadPlanInput(supabase: any, userId: string, enrollmentId: string
       prereqChapterIds: c.prereq_chapter_ids || [],
       examWeightPct: c.exam_weight_pct,
       maturityBand: c.maturity_band || 3,
+      summativeNo: c.summative_no ?? null,
     })),
     persona: persona || {
       daily_study_minutes_available: null,
@@ -96,6 +97,7 @@ async function loadPlanInput(supabase: any, userId: string, enrollmentId: string
       paceMultipliers: enrollment.pace_multipliers || {},
     },
     careerPath: persona?.career_path || null,
+    targetSummative: targetSummative ?? null,
   };
 }
 
@@ -133,7 +135,10 @@ export async function POST(req: Request) {
     const enrollmentId = body.enrollmentId;
     if (!enrollmentId) return NextResponse.json({ error: 'enrollmentId required' }, { status: 400 });
 
-    const input = await loadPlanInput(supabase, user.id, enrollmentId);
+    const targetSummative = body.targetSummative === 1 || body.targetSummative === 2 || body.targetSummative === 3
+      ? body.targetSummative as 1 | 2 | 3
+      : null;
+    const input = await loadPlanInput(supabase, user.id, enrollmentId, targetSummative);
     if (!input) return NextResponse.json({ error: 'Enrollment not found' }, { status: 404 });
 
     const plan = generatePlan(input);

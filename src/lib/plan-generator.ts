@@ -69,6 +69,8 @@ export interface PlanInput {
     prereqChapterIds: string[];
     examWeightPct: number | null;
     maturityBand: number;
+    /** WBBSE term: 1 = before 1st Summative, 2 = before 2nd, 3 = before annual. NULL = carry-over. */
+    summativeNo?: number | null;
   }>;
   persona: {
     dailyStudyMinutesAvailable: number | null;
@@ -90,6 +92,12 @@ export interface PlanInput {
   };
   /** Optional career-path emphasis from persona_profiles.career_path. */
   careerPath?: string | null;
+  /**
+   * When set, the planner restricts to chapters with chapter.summativeNo === targetSummative
+   * (or null = carry-over). Used by "prepare for next summative" replan from /courses/my.
+   * Falls back to the full year when null/undefined.
+   */
+  targetSummative?: 1 | 2 | 3 | null;
 }
 
 export interface PlanWeek {
@@ -120,7 +128,7 @@ export interface Plan {
   weeks: PlanWeek[];
 }
 
-const GENERATOR_VERSION = 'v1.1';   // adds pace multipliers + career emphasis
+const GENERATOR_VERSION = 'v1.2';   // adds pace multipliers + career emphasis + summative filter
 const MIN_SUBJECT_SHARE = 0.10;          // floor share of weekly minutes per subject
 const LIGHT_WEEK_FACTOR = 0.30;          // multiplier for holiday-heavy weeks
 const REVISION_TAIL_WEEKS = 4;           // last N weeks reserved for revision
@@ -242,9 +250,16 @@ function subjectShares(
 }
 
 export function generatePlan(input: PlanInput): Plan {
-  const { course, subjects, chapters, persona, calendars, enrollment, careerPath } = input;
+  const { course, subjects, persona, calendars, enrollment, careerPath, targetSummative } = input;
   const totalWeeks = course.expectedWeeks || 40;
   const weeks: PlanWeek[] = [];
+
+  // Term filter: when targetSummative is set, restrict to chapters in that
+  // window plus carry-overs (summativeNo IS NULL). The student picks this
+  // from /courses/my via "prepare for Summative N".
+  const chapters = targetSummative
+    ? input.chapters.filter((c) => c.summativeNo == null || c.summativeNo === targetSummative)
+    : input.chapters;
 
   // Pre-compute persona-driven daily budget. Use the smaller of:
   //   - persona's declared daily_study_minutes_available
