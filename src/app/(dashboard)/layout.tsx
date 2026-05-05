@@ -57,6 +57,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: '/arena', icon: '🎯', label: 'The Arena' },
       { href: '/mock-test', icon: '📝', label: 'Mock Test' },
+      { href: '/past-papers', icon: '📚', label: 'Past Papers' },
       { href: '/league', icon: '💠', label: 'Weekly League' },
       { href: '/activities', icon: '🎮', label: 'Activities' },
       { href: '/challenges', icon: '🏆', label: 'Challenges' },

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@/lib/supabase';
+import ThemeToggle from '@/components/ThemeToggle';
+import SchoolPicker from '@/components/SchoolPicker';
 
 interface UserSettings {
   name: string;
@@ -460,22 +462,12 @@ export default function SettingsPage() {
 
             <div className="pt-6 border-t border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Appearance</h3>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-700">Dark Mode</p>
-                  <p className="text-sm text-gray-500">Use dark theme (Coming soon)</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked="false"
-                  aria-label="Toggle dark mode"
-                  disabled
-                  className="w-12 h-6 rounded-full bg-gray-200 opacity-50 cursor-not-allowed"
-                >
-                  <div className="w-5 h-5 bg-white rounded-full shadow translate-x-0.5" />
-                </button>
-              </div>
+              <ThemeToggle />
+            </div>
+
+            <div className="pt-6 border-t border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">School & classroom league</h3>
+              <SchoolPicker defaultBoard={settings.board === 'wb_board' ? 'wbbse' : settings.board} />
             </div>
           </div>
         )}

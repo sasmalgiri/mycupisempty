@@ -231,8 +231,14 @@ export default function DailyMixPage() {
 
   // Character wisdom — today's value rotates daily
   const todaysValue = useMemo(() => getTodaysCharacterValue(), []);
-  const classLevel = 8; // TODO: get from user profile
-  const wisdomQuote = useMemo(() => getAgeFraming(todaysValue, classLevel), [todaysValue]);
+  const [classLevel, setClassLevel] = useState(8);
+  useEffect(() => {
+    fetch('/api/profile').then((r) => r.json()).then((d) => {
+      const lvl = Number(d?.profile?.current_class) || 0;
+      if (lvl >= 1 && lvl <= 12) setClassLevel(lvl);
+    }).catch(() => {});
+  }, []);
+  const wisdomQuote = useMemo(() => getAgeFraming(todaysValue, classLevel), [todaysValue, classLevel]);
   const dailyPractice = useMemo(() => getDailyPractice(todaysValue), [todaysValue]);
   const sourceQuote = useMemo(() => getSourceQuote(todaysValue), [todaysValue]);
 

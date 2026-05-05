@@ -6,7 +6,7 @@
  * upload requires Supabase storage to be wired (left as caller config).
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Upload {
   id: string;
@@ -22,6 +22,9 @@ export default function MagicNotesPage() {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoMsg, setPhotoMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = () => {
     setLoading(true);
@@ -32,6 +35,32 @@ export default function MagicNotesPage() {
       .finally(() => setLoading(false));
   };
   useEffect(load, []);
+
+  // Browser-side OCR via Tesseract.js when the user picks a photo. We dynamic-
+  // import on first use so the 2.5 MB Tesseract bundle isn't pulled into the
+  // initial Magic Notes page load.
+  const onPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoBusy(true); setPhotoMsg('Reading photo…');
+    try {
+      const Tesseract = (await import('tesseract.js')).default;
+      const result = await Tesseract.recognize(file, 'eng+ben', {
+        logger: (m: any) => {
+          if (m.status === 'recognizing text') setPhotoMsg(`Reading… ${Math.round((m.progress || 0) * 100)}%`);
+        },
+      });
+      const text = String(result?.data?.text || '').trim();
+      if (text.length < 20) { setPhotoMsg('Not enough text recognised. Try a clearer photo.'); return; }
+      setPasteText((prev) => (prev ? prev + '\n\n' : '') + text);
+      setPhotoMsg(`Extracted ${text.length} chars. Review then submit below.`);
+    } catch (err: any) {
+      setPhotoMsg(`OCR failed: ${err?.message || 'unknown error'}`);
+    } finally {
+      setPhotoBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const submitPaste = async () => {
     if (!pasteText.trim()) return;
@@ -82,9 +111,23 @@ export default function MagicNotesPage() {
         >
           Extract concepts
         </button>
-        <p className="text-[10px] text-gray-500 mt-2">
-          Camera + OCR upload coming soon. For now: paste works for blackboard photos via Google Lens copy-paste.
-        </p>
+        <div className="mt-3 pt-3 border-t border-fuchsia-200 dark:border-fuchsia-800">
+          <label htmlFor="magic-photo" className="text-xs font-bold text-fuchsia-800 dark:text-fuchsia-300">📷 Or snap a photo (English + Bengali)</label>
+          <input
+            id="magic-photo"
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            disabled={photoBusy}
+            onChange={onPhoto}
+            className="block mt-1 text-xs"
+          />
+          {photoMsg && <p className="text-[11px] text-fuchsia-800 dark:text-fuchsia-300 mt-1">{photoMsg}</p>}
+          <p className="text-[10px] text-gray-500 mt-1">
+            On-device OCR (Tesseract.js) — your photo never leaves your phone. Works offline once cached.
+          </p>
+        </div>
       </section>
 
       <section>
