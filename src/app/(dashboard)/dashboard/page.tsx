@@ -13,6 +13,7 @@ import NextStepGuide from '@/components/NextStepGuide';
 import DailyWonderCard from '@/components/DailyWonderCard';
 import TodaysPlanBanner from '@/components/TodaysPlanBanner';
 import StuckDetectorBanner from '@/components/StuckDetectorBanner';
+import ExamCountdownCard from '@/components/ExamCountdownCard';
 
 // Subject with progress for display
 interface SubjectWithProgress {
@@ -273,6 +274,9 @@ export default function DashboardPage() {
 
         {/* Stuck-detector banner — only renders if a chapter is fighting back */}
         <StuckDetectorBanner />
+
+        {/* Exam countdown — surfaces next summative window + syllabus coverage */}
+        <ExamCountdownCard />
 
         {/* Today's plan slice — only renders when student is enrolled in a course */}
         <TodaysPlanBanner />

@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import CourseSettingsCard from '@/components/CourseSettingsCard';
+import TermProgressCard from '@/components/TermProgressCard';
 
 interface Block {
   subjectSlug: string;
@@ -228,6 +229,9 @@ export default function MyCoursePage() {
           </div>
         </section>
       )}
+
+      {/* Term progress + plan tuning */}
+      <TermProgressCard enrollmentId={enrollment.id} />
 
       {/* Plan tuning */}
       {planSubjects.length > 0 && (
