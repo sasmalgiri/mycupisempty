@@ -9,6 +9,10 @@ import LearningModePill, { type ExplanationMode } from '@/components/LearningMod
 import ReadAloudButton from '@/components/ReadAloudButton';
 import NextStepGuide from '@/components/NextStepGuide';
 import PretestCard, { type PretestQuestion } from '@/components/PretestCard';
+import ActiveBreak from '@/components/ActiveBreak';
+import ExitEvalCard from '@/components/ExitEvalCard';
+import ArenaPlayer from '@/components/arena/ArenaPlayer';
+import { pickNextGame, type MinigameId } from '@/lib/arena-signals';
 
 interface SpacedRepItem {
   id: string;
@@ -247,6 +251,34 @@ export default function DailyMixPage() {
   const [pretestQuestions, setPretestQuestions] = useState<PretestQuestion[] | null>(null);
   const [pretestDone, setPretestDone] = useState(false);
   const [pretestLoading, setPretestLoading] = useState(false);
+
+  // v2 arc state — Open (Arena), break-gating between blocks, and the
+  // single transfer Exit Eval before Wrap. Each gate is independent so the
+  // existing 5-step server flow is unchanged; v2 layers around it.
+  const [arenaShown, setArenaShown] = useState(false);
+  const [arenaSkipped, setArenaSkipped] = useState(false);
+  const arenaGameRef = useRef<MinigameId>('pattern_trace');
+  const [break1Shown, setBreak1Shown] = useState(false);   // between concept (1) and habit (2)
+  const [break1Done, setBreak1Done] = useState(false);
+  const [break2Shown, setBreak2Shown] = useState(false);   // between reflection (3) and challenge (4)
+  const [break2Done, setBreak2Done] = useState(false);
+  const [exitEvalShown, setExitEvalShown] = useState(false);
+  const [exitEvalDone, setExitEvalDone] = useState(false);
+
+  // Pick which Arena game to play at Open (least-recently-played first).
+  useEffect(() => {
+    fetch('/api/arena?last=10')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d?.success) return;
+        const map: Partial<Record<MinigameId, string>> = {};
+        for (const r of (d.results || []) as Array<{ game: MinigameId; played_at: string }>) {
+          if (!map[r.game]) map[r.game] = r.played_at;
+        }
+        arenaGameRef.current = pickNextGame(map);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch('/api/learning-mode')
@@ -770,6 +802,55 @@ export default function DailyMixPage() {
         )}
 
         {/* Step content */}
+        {/* === v2 Arc: Open with a 30-90s Arena minigame to capture signal ===
+            Surfaces only at step 0 the first time. Skipping is fine — the
+            student still earns Honesty XP for completing one. */}
+        {currentStep === 0 && !arenaShown && !arenaSkipped && (
+          <div className="mb-4">
+            <ArenaPlayer
+              game={arenaGameRef.current}
+              trigger="session_start"
+              onDone={() => setArenaShown(true)}
+              onSkip={() => { setArenaSkipped(true); setArenaShown(true); }}
+            />
+          </div>
+        )}
+
+        {/* === v2 Arc: Break 1 between Concept (step 1) and Habit (step 2) === */}
+        {currentStep === 2 && !break1Done && !break1Shown && (
+          <div className="mb-4">
+            <ActiveBreak
+              durationSec={75}
+              recallContext={mix?.new_concept?.topics?.title}
+              onDone={(info) => {
+                setBreak1Done(true);
+                setBreak1Shown(true);
+                if (info.recall) {
+                  collectSignal({
+                    user_id: userId || 'anonymous',
+                    signal_type: 'free_recall_break',
+                    category: 'engagement',
+                    source: 'daily_mix',
+                    value: Math.min(1, info.recall.split(/\s+/).length / 30),
+                    metadata: { kind: info.kind, words: info.recall.split(/\s+/).length },
+                  });
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {/* === v2 Arc: Break 2 between Reflection (step 3) and Challenge (step 4) === */}
+        {currentStep === 4 && !break2Done && !break2Shown && (
+          <div className="mb-4">
+            <ActiveBreak
+              durationSec={60}
+              kind="breathing"
+              onDone={() => { setBreak2Done(true); setBreak2Shown(true); }}
+            />
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {/* Step 0: Spaced Repetition */}
           {currentStep === 0 && (
@@ -1234,12 +1315,35 @@ export default function DailyMixPage() {
                       Submit Answer
                     </button>
                   ) : (
-                    <button
-                      onClick={handleFinish}
-                      className="w-full py-4 bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-2xl font-bold text-lg hover:shadow-lg transition-all"
-                    >
-                      Finish Daily Mix
-                    </button>
+                    <>
+                      {/* v2 Arc: honest exit eval gates session completion.
+                          Shown after the challenge is submitted; once the
+                          eval is done (or skipped explicitly), Finish unlocks. */}
+                      {!exitEvalDone && mix.new_concept?.topics?.id && (
+                        <div className="mb-4">
+                          <ExitEvalCard
+                            topicId={mix.new_concept.topics.id}
+                            topicTitle={mix.new_concept.topics.title}
+                            subjectId={mix.new_concept.topics.subject_id}
+                            companionId={undefined}
+                            modeUsed={learningMode}
+                            sessionId={session?.id}
+                            onComplete={() => setExitEvalDone(true)}
+                          />
+                        </div>
+                      )}
+                      <button
+                        onClick={handleFinish}
+                        disabled={!exitEvalDone && !!mix.new_concept?.topics?.id}
+                        className={`w-full py-4 rounded-2xl font-bold text-lg transition-all ${
+                          (!exitEvalDone && !!mix.new_concept?.topics?.id)
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white hover:shadow-lg'
+                        }`}
+                      >
+                        {(!exitEvalDone && !!mix.new_concept?.topics?.id) ? 'Finish (do exit question first)' : 'Finish Daily Mix'}
+                      </button>
+                    </>
                   )}
                 </>
               ) : (
