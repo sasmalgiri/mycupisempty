@@ -28,7 +28,11 @@ export type ExperienceKind =
   | 'modality'
   | 'reminder_timing'
   | 'assignment_shape'
-  | 'adaptation_decision';
+  | 'adaptation_decision'
+  // Which representation we used for a given KIND of knowledge. Keyed by
+  // conversionContextKey() so priors separate "storytelling worked for the
+  // dates" from "storytelling worked for the concepts".
+  | 'conversion';
 
 export interface ExperienceRecord {
   userId: string;

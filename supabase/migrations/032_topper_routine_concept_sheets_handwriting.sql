@@ -190,13 +190,18 @@ DO $$ BEGIN
   ALTER TABLE public.parent_artifacts
     DROP CONSTRAINT IF EXISTS parent_artifacts_kind_check;
 EXCEPTION WHEN undefined_table THEN NULL; END $$;
+-- The column is artifact_kind, not kind — 021_master_redesign creates
+-- parent_artifacts(id, user_id, artifact_kind, ...). Referencing "kind" here
+-- aborted the migration with "column kind does not exist".
 DO $$ BEGIN
   ALTER TABLE public.parent_artifacts
     ADD CONSTRAINT parent_artifacts_kind_check
-    CHECK (kind IN ('weekly_digest', 'monthly_report', 'character_growth', 'rank_predictor', 'primary_dinner_card'));
+    CHECK (artifact_kind IN ('weekly_digest', 'monthly_report', 'character_growth', 'rank_predictor', 'primary_dinner_card'));
 EXCEPTION
-  WHEN duplicate_object THEN NULL;
-  WHEN undefined_table THEN NULL;
+  WHEN duplicate_object  THEN NULL;
+  WHEN duplicate_table   THEN NULL;
+  WHEN undefined_table   THEN NULL;
+  WHEN undefined_column  THEN NULL;
 END $$;
 
 -- 7. Topper score view -------------------------------------------------------
@@ -226,13 +231,15 @@ WITH base AS (
       WHERE x.user_id = p.id
       AND x.created_at >= NOW() - INTERVAL '14 days'
     ), 0)                                                                 AS adherence_frac,
-    -- Recent practice: count distinct chapter_ids touched in last 7 days, capped at 10
+    -- Recent practice: distinct topics touched in the last 7 days, capped at 10.
+    -- session_evaluations records topic_id, not chapter_id — counting distinct
+    -- topics is the same signal at finer grain.
     COALESCE((
-      SELECT LEAST(COUNT(DISTINCT chapter_id), 10)::numeric / 10
+      SELECT LEAST(COUNT(DISTINCT topic_id), 10)::numeric / 10
       FROM public.session_evaluations e
       WHERE e.user_id = p.id
       AND e.evaluated_at >= NOW() - INTERVAL '7 days'
-      AND e.chapter_id IS NOT NULL
+      AND e.topic_id IS NOT NULL
     ), 0)                                                                 AS practice_freq
   FROM public.profiles p
   LEFT JOIN public.streaks s ON s.user_id = p.id
@@ -258,16 +265,20 @@ GRANT SELECT ON public.v_topper_score TO authenticated;
 -- 8. Yesterday's mistake view ------------------------------------------------
 -- Each user's lowest-score evaluation in the last 24h. Used by the dashboard
 -- "Redo your mistake" first-card.
+-- session_evaluations has no chapter_id, so resolve it through the topic.
+-- The LEFT JOIN keeps the column in the view's shape (callers select it)
+-- and simply yields NULL when the topic is not a curriculum topic.
 CREATE OR REPLACE VIEW public.v_yesterdays_mistake AS
 SELECT DISTINCT ON (e.user_id)
   e.user_id,
   e.id AS evaluation_id,
-  e.chapter_id,
+  t.chapter_id,
   e.topic_id,
   e.subject_id,
   e.score,
   e.evaluated_at
 FROM public.session_evaluations e
+LEFT JOIN public.curriculum_topics t ON t.id = e.topic_id
 WHERE e.evaluated_at >= NOW() - INTERVAL '36 hours'
   AND e.score < 0.7
 ORDER BY e.user_id, e.score ASC, e.evaluated_at DESC;

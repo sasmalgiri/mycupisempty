@@ -7,6 +7,57 @@ export async function GET(request: NextRequest) {
     const supabase = await createServerClient();
     const { searchParams } = new URL(request.url);
 
+    // ---------------------------------------------------------------------
+    // action=* — the CURRICULUM schema (curriculum_subjects_by_class →
+    // curriculum_chapters → curriculum_topics), which is where the seeded
+    // syllabus actually lives. The legacy branches below read
+    // classes/subjects/chapters/topics from migration 001; no migration ever
+    // inserts a row into those, so they return empty.
+    //
+    // Kept as a separate `action` branch so the existing ?class= / ?subjectId=
+    // / ?chapterId= callers are untouched.
+    // ---------------------------------------------------------------------
+    const action = searchParams.get('action');
+
+    if (action === 'subjects') {
+      const classLevel = parseInt(searchParams.get('classLevel') || '0', 10);
+      if (!classLevel) {
+        return NextResponse.json({ error: 'classLevel required' }, { status: 400 });
+      }
+      const { data, error } = await (supabase as any)
+        .from('curriculum_subjects_by_class')
+        .select('id, subject_slug, board_code, class_level, language, textbook_title_en, textbook_title_native, total_chapters')
+        .eq('class_level', classLevel)
+        .order('subject_slug');
+      if (error) throw error;
+
+      const subjects = (data || []).map((s: any) => ({
+        ...s,
+        // One label a teacher can pick from unambiguously — the same subject
+        // often exists under several boards and languages.
+        label: [
+          s.subject_slug.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          s.board_code ? `· ${s.board_code.toUpperCase()}` : '',
+          s.language && s.language !== 'en' ? `(${s.language})` : '',
+        ].filter(Boolean).join(' '),
+      }));
+      return NextResponse.json({ subjects });
+    }
+
+    if (action === 'chapters') {
+      const subjectClassId = searchParams.get('subjectClassId');
+      if (!subjectClassId) {
+        return NextResponse.json({ error: 'subjectClassId required' }, { status: 400 });
+      }
+      const { data, error } = await (supabase as any)
+        .from('curriculum_chapters')
+        .select('id, chapter_no, title_en, title_native, maturity_band, exam_weight_pct')
+        .eq('subject_class_id', subjectClassId)
+        .order('chapter_no');
+      if (error) throw error;
+      return NextResponse.json({ chapters: data || [] });
+    }
+
     const classNumber = searchParams.get('class');
     const subjectId = searchParams.get('subject');
     const chapterId = searchParams.get('chapter');

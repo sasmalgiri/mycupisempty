@@ -10,8 +10,14 @@ build/
 dist/
 
 # Environment variables
+# The .bak/.backup globs matter: this repo is PUBLIC, and a stray
+# .env.local.bak-<timestamp> is a live service-role key one  away
+# from being world-readable.
 .env
 .env.local
+.env*.bak*
+.env*.backup*
+*.env.bak
 .env.development.local
 .env.test.local
 .env.production.local

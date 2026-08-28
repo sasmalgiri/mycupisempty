@@ -187,7 +187,7 @@ function orderChapters(chapters: PlanInput['chapters']): PlanInput['chapters'] {
   let safety = ranked.length * 3;
   while (ranked.length && safety-- > 0) {
     const next = ranked.shift()!;
-    const unmet = next.prereqChapterIds.some((p) => !placed.has(p));
+    const unmet = (next.prereqChapterIds ?? []).some((p) => !placed.has(p));
     if (unmet) {
       ranked.push(next); // try later
     } else {

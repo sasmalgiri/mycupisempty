@@ -11,6 +11,15 @@
     },
     "src/app/api/refresh-content/route.ts": {
       "maxDuration": 300
+    },
+    "src/app/api/conversion/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/exam-plan/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/today/route.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [
@@ -25,17 +34,10 @@
     {
       "path": "/api/ingest-past-papers",
       "schedule": "0 23 * * *"
-    }
-  ],
-  "headers": [
+    },
     {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version" }
-      ]
+      "path": "/api/conversion-probe",
+      "schedule": "0 3 * * *"
     }
   ],
   "rewrites": [

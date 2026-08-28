@@ -82,7 +82,15 @@ describe('deltaToPromptBlock', () => {
   it('includes concise lines for active directives', () => {
     const d = adaptationDelta([mkDir({ type: 'push_harder', reason: 'flourishing across subjects' })]);
     const block = deltaToPromptBlock(d);
+    expect(block).toContain('MAIN-BRAIN ADAPTATION');
     expect(block).toContain('STRETCH');
-    expect(block).toContain('flourishing');
+  });
+
+  it('keeps the directive reason out of the prompt — it is UI/analytics only', () => {
+    // The companion is told WHAT to do, not the brain's internal rationale for
+    // it. Reasons live on delta.applied for the parent dashboard instead.
+    const d = adaptationDelta([mkDir({ type: 'push_harder', reason: 'flourishing across subjects' })]);
+    expect(deltaToPromptBlock(d)).not.toContain('flourishing');
+    expect(d.applied[0].reason).toBe('flourishing across subjects');
   });
 });

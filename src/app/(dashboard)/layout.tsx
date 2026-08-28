@@ -18,7 +18,9 @@ const navGroups: NavGroup[] = [
     label: 'Start here',
     pinned: true,
     items: [
+      { href: '/today', icon: '☀️', label: 'Today' },
       { href: '/dashboard', icon: '🏠', label: 'Dashboard' },
+      { href: '/teach', icon: '🎓', label: 'Teach' },
       { href: '/topper-routine', icon: '🏆', label: 'Topper Routine' },
       { href: '/daily-mix', icon: '🎯', label: 'Daily Mix' },
       { href: '/guru', icon: '🧙', label: 'AI Guru' },

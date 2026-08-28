@@ -1,50 +1,58 @@
 import { describe, it, expect } from 'vitest';
-import { generatePlan } from '../plan-generator';
+import { generatePlan, type PlanInput } from '../plan-generator';
 
-const baseCourse = {
-  id: 'course-1', board_code: 'wbbse', class_level: 10, language: 'bn',
-  academic_year: '2026', total_subjects: 3,
-  expected_hours_total: 600, expected_weeks: 24,
-} as any;
+// NOTE: these fixtures are deliberately NOT cast with `as any`. They were, and
+// the casts hid the fact that every field was snake_case (DB row shape) while
+// generatePlan takes camelCase — so the suite exercised a plan built entirely
+// from undefined. Typing them means the compiler catches the next drift.
 
-const baseSubjects = [
-  { id: 's-math', subject_slug: 'math', total_chapters: 6, expected_hours_per_year: 200, expected_minutes_per_week: 300 },
-  { id: 's-phys', subject_slug: 'physical_science', total_chapters: 4, expected_hours_per_year: 150, expected_minutes_per_week: 270 },
-  { id: 's-life', subject_slug: 'life_science', total_chapters: 4, expected_hours_per_year: 140, expected_minutes_per_week: 240 },
-] as any;
+const baseCourse: PlanInput['course'] = {
+  boardCode: 'wbbse',
+  classLevel: 10,
+  language: 'bn',
+  expectedWeeks: 24,
+};
 
-function chapter(idx: number, scId: string) {
+const baseSubjects: PlanInput['subjects'] = [
+  { id: 's-math', subjectSlug: 'math', totalChapters: 6, expectedHoursPerYear: 200 },
+  { id: 's-phys', subjectSlug: 'physical_science', totalChapters: 4, expectedHoursPerYear: 150 },
+  { id: 's-life', subjectSlug: 'life_science', totalChapters: 4, expectedHoursPerYear: 140 },
+];
+
+function chapter(idx: number, scId: string): PlanInput['chapters'][number] {
   return {
     id: `${scId}-ch-${idx}`,
-    subject_class_id: scId,
-    chapter_no: idx,
-    title_en: `${scId} ch${idx}`,
-    season_hint: idx <= 2 ? 'early' : idx <= 4 ? 'mid' : 'late',
-    expected_hours: 12,
-    maturity_band: 4,
-    prereq_chapter_ids: [],
-  } as any;
+    subjectClassId: scId,
+    chapterNo: idx,
+    titleEn: `${scId} ch${idx}`,
+    seasonHint: idx <= 2 ? 'early' : idx <= 4 ? 'mid' : 'late',
+    expectedHours: 12,
+    prereqChapterIds: [],
+    examWeightPct: null,
+    maturityBand: 4,
+  };
 }
 
-const baseChapters = [
+const baseChapters: PlanInput['chapters'] = [
   ...Array.from({ length: 6 }, (_, i) => chapter(i + 1, 's-math')),
   ...Array.from({ length: 4 }, (_, i) => chapter(i + 1, 's-phys')),
   ...Array.from({ length: 4 }, (_, i) => chapter(i + 1, 's-life')),
 ];
 
-const basePersona = {
-  daily_minutes_available: 90,
-  effort_tolerance: 0.6,
-  best_study_time: 'evening',
-} as any;
+const basePersona: PlanInput['persona'] = {
+  dailyStudyMinutesAvailable: 90,
+  bestStudyTime: 'evening',
+  energyAfterSchool: null,
+  effortTolerance: 0.6,
+  perfectionism: null,
+};
 
-const baseEnrollment = {
-  id: 'enr-1', user_id: 'u-1', course_id: 'course-1',
-  start_date: '2026-04-01', target_end_date: '2026-12-31',
-  weekly_minutes_target: 600, status: 'active',
-} as any;
+const baseEnrollment: PlanInput['enrollment'] = {
+  startDate: '2026-04-01',
+  weeklyMinutesTarget: 600,
+};
 
-function planInput(extra?: Partial<Parameters<typeof generatePlan>[0]>) {
+function planInput(extra?: Partial<PlanInput>): PlanInput {
   return {
     course: baseCourse,
     subjects: baseSubjects,
@@ -53,8 +61,18 @@ function planInput(extra?: Partial<Parameters<typeof generatePlan>[0]>) {
     enrollment: baseEnrollment,
     calendars: [],
     ...extra,
-  } as any;
+  };
 }
+
+const sumMinutes = (plan: ReturnType<typeof generatePlan>, slug: string) =>
+  plan.weeks.reduce(
+    (sum, w) =>
+      sum +
+      w.blocks
+        .filter((b) => b.subjectSlug === slug)
+        .reduce((s, b) => s + b.allocatedMinutes, 0),
+    0,
+  );
 
 describe('plan-generator pace + career levers', () => {
   it('produces a deterministic plan with all subjects represented', () => {
@@ -72,18 +90,14 @@ describe('plan-generator pace + career levers', () => {
     const fastMath = generatePlan(planInput({
       enrollment: { ...baseEnrollment, paceMultipliers: { math: 0.6, physical_science: 1.2, life_science: 1.2 } },
     }));
-    const sumMins = (plan: ReturnType<typeof generatePlan>, slug: string) =>
-      plan.weeks.reduce((sum, w) => sum + w.blocks.filter((b) => b.subjectSlug === slug).reduce((s, b) => s + b.allocatedMinutes, 0), 0);
-    expect(sumMins(slowMath, 'math')).toBeGreaterThan(sumMins(fastMath, 'math'));
+    expect(sumMinutes(slowMath, 'math')).toBeGreaterThan(sumMinutes(fastMath, 'math'));
   });
 
   it('career=engineer tilts more time toward math + physical_science vs unsure', () => {
-    const engineer = generatePlan(planInput({ careerPath: 'engineer' as any }));
-    const baseline = generatePlan(planInput({ careerPath: 'unsure' as any }));
-    const sumFor = (plan: ReturnType<typeof generatePlan>, slug: string) =>
-      plan.weeks.reduce((sum, w) => sum + w.blocks.filter((b) => b.subjectSlug === slug).reduce((s, b) => s + b.allocatedMinutes, 0), 0);
-    const ratioE = sumFor(engineer, 'math') / Math.max(1, sumFor(engineer, 'life_science'));
-    const ratioU = sumFor(baseline, 'math') / Math.max(1, sumFor(baseline, 'life_science'));
+    const engineer = generatePlan(planInput({ careerPath: 'engineer' }));
+    const baseline = generatePlan(planInput({ careerPath: 'unsure' }));
+    const ratioE = sumMinutes(engineer, 'math') / Math.max(1, sumMinutes(engineer, 'life_science'));
+    const ratioU = sumMinutes(baseline, 'math') / Math.max(1, sumMinutes(baseline, 'life_science'));
     expect(ratioE).toBeGreaterThan(ratioU);
   });
 

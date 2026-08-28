@@ -92,6 +92,11 @@ describe('interventionToAIPrompt', () => {
     const p = interventionToAIPrompt(iv);
     expect(p).toContain('misconception');
     expect(p).toContain('Counter-example');
-    expect(p).toContain('practice');
+    // Assert on the rendered CONTENT, not on section labels — the previous
+    // 'practice' assertion was matching a label word that the renderer never
+    // emits (the practice prompt ships under 'After explaining, ask:').
+    expect(p).toContain(iv.correction);
+    expect(p).toContain(iv.counterExample);
+    expect(p).toContain(iv.practicePrompt);
   });
 });

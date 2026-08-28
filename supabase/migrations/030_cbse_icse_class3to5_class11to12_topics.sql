@@ -767,10 +767,17 @@ ALTER TABLE public.weekly_league_standings
 -- migration is idempotent.
 ALTER TABLE public.schools
   ADD COLUMN IF NOT EXISTS pin_code TEXT;
+-- Adding a UNIQUE constraint also creates an index of the same name, so a
+-- database that already has that index raises duplicate_table
+-- ("relation ... already exists"), NOT duplicate_object. Catching only
+-- duplicate_object let the error escape and aborted the migration.
 DO $$ BEGIN
   ALTER TABLE public.schools
     ADD CONSTRAINT schools_name_board_city_uq UNIQUE (name, board_code, city);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+  WHEN duplicate_table  THEN NULL;
+END $$;
 
 INSERT INTO public.schools (name, board_code, city, state)
 VALUES

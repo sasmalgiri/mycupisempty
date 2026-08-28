@@ -107,9 +107,42 @@ CREATE TABLE IF NOT EXISTS public.flashcards (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ---------------------------------------------------------------------------
+-- Reconcile with the flashcards table from 001_initial_schema.
+--
+-- 001 already created public.flashcards as a topic-scoped card with no owner
+-- (id, topic_id, front_text, back_text, card_type, created_at). The CREATE
+-- TABLE IF NOT EXISTS above therefore does NOTHING on any database where 001
+-- ran — the per-user SM-2 columns are silently skipped, and the index on
+-- user_id below fails with "column user_id does not exist".
+--
+-- This block adds what 011 actually needs, so the migration is correct whether
+-- it meets 001's table or its own.
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.flashcards
+    ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    ADD COLUMN IF NOT EXISTS subject_id UUID REFERENCES public.subjects(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS front TEXT,
+    ADD COLUMN IF NOT EXISTS back TEXT,
+    ADD COLUMN IF NOT EXISTS hint TEXT,
+    ADD COLUMN IF NOT EXISTS difficulty TEXT DEFAULT 'medium',
+    ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual',
+    ADD COLUMN IF NOT EXISTS ease_factor NUMERIC DEFAULT 2.5,
+    ADD COLUMN IF NOT EXISTS interval_days INTEGER DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS review_count INTEGER DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS next_review_at TIMESTAMPTZ DEFAULT NOW();
+
+-- Carry across 001's column names where rows already exist, so no card is lost.
+UPDATE public.flashcards SET front = front_text WHERE front IS NULL AND front_text IS NOT NULL;
+UPDATE public.flashcards SET back  = back_text  WHERE back  IS NULL AND back_text  IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_flashcards_user_due ON public.flashcards(user_id, next_review_at);
 CREATE INDEX IF NOT EXISTS idx_flashcards_topic ON public.flashcards(topic_id);
 ALTER TABLE public.flashcards ENABLE ROW LEVEL SECURITY;
+
+-- CREATE POLICY has no IF NOT EXISTS, and re-running a migration against a
+-- database that already has the policy would abort the whole transaction.
+DROP POLICY IF EXISTS "Users manage own flashcards" ON public.flashcards;
 CREATE POLICY "Users manage own flashcards" ON public.flashcards FOR ALL USING (auth.uid() = user_id);
 
 CREATE TABLE IF NOT EXISTS public.flashcard_reviews (
