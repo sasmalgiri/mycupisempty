@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { averageBy } from '@/lib/safe-math';
 import { useParams, useRouter } from 'next/navigation';
 
 interface Chapter {
@@ -105,9 +106,8 @@ export default function SubjectPage() {
     );
   }
 
-  const overallProgress = Math.round(
-    subject.chapters.reduce((sum, ch) => sum + ch.progress, 0) / subject.chapters.length
-  );
+  // averageBy is 0 for a subject with no chapters loaded yet, not NaN.
+  const overallProgress = averageBy(subject.chapters, (ch) => ch.progress);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-primary-50 to-secondary-50">

@@ -2,11 +2,33 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase';
 
+/**
+ * Where to land after a successful login.
+ *
+ * Middleware bounces an unauthenticated visitor to /login?redirect=<path> so
+ * they can be returned to the page they actually wanted — but this page used
+ * to ignore the parameter and always push /dashboard.
+ *
+ * Only same-origin absolute paths are honoured. Without that check a link to
+ * /login?redirect=https://evil.example (or the protocol-relative
+ * //evil.example) would turn our own login page into an open redirect —
+ * a credible phishing hop precisely because the domain the parent sees is
+ * genuinely ours.
+ *
+ * Read from window.location rather than useSearchParams() so the page needs no
+ * Suspense boundary; it is only ever needed inside a click handler.
+ */
+function postLoginDestination(): string {
+  if (typeof window === 'undefined') return '/dashboard';
+  const raw = new URLSearchParams(window.location.search).get('redirect');
+  if (!raw) return '/dashboard';
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/dashboard';
+  return raw;
+}
+
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,7 +50,11 @@ export default function LoginPage() {
       if (error) throw error;
 
       if (data.user) {
-        router.push('/dashboard');
+        // A full document load, not router.push(). The auth cookie was written
+        // a moment ago; the App Router would otherwise be free to serve the
+        // destination from a Server Component payload it rendered while we
+        // were still signed out, which bounces the user straight back here.
+        window.location.assign(postLoginDestination());
       }
     } catch (err: any) {
       setError(err.message || 'Failed to login');

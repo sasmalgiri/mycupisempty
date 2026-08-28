@@ -1,5 +1,7 @@
 'use client';
 
+import { safeDiv } from '@/lib/safe-math';
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 
@@ -116,7 +118,8 @@ export default function WeaknessHeatMapPage() {
     });
     const avgs: Record<string, number> = {};
     MASTERY_COMPONENTS.forEach(c => {
-      avgs[c.key] = Math.round(sums[c.key] / filteredTopics.length);
+      // A filter that matches no topics must read 0, not NaN.
+      avgs[c.key] = Math.round(safeDiv(sums[c.key], filteredTopics.length));
     });
     return avgs as Record<MasteryKey, number>;
   }, [filteredTopics]);

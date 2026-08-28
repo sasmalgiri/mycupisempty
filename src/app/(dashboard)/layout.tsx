@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase';
 import UnstuckButton from '@/components/UnstuckButton';
 import LegalDisclaimer from '@/components/LegalDisclaimer';
 import LocaleSwitcher from '@/components/LocaleSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
+import { resolveClassLevel, formatBoard } from '@/lib/user-class';
 import { flushSignals } from '@/lib/learner-engine';
 
 interface NavItem { href: string; icon: string; label: string; }
@@ -87,13 +88,19 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Learn: true, Grow: false, Play: false, Family: false });
-  const [userProfile, setUserProfile] = useState({
+  const [userProfile, setUserProfile] = useState<{
+    name: string;
+    /** null = profile doesn't say yet; render nothing rather than "Class 0". */
+    class: number | null;
+    board: string;
+    xp: number;
+    streak: number;
+  }>({
     name: '',
-    class: 0,
-    board: 'cbse',
+    class: null,
+    board: '',
     xp: 0,
     streak: 0,
   });
@@ -121,7 +128,7 @@ export default function DashboardLayout({
       // never existed in any migration even though some legacy code referenced it).
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, current_class, board_code')
+        .select('full_name, current_class, board_code, education_level')
         .eq('id', user.id)
         .single() as any;
 
@@ -134,7 +141,9 @@ export default function DashboardLayout({
 
       setUserProfile({
         name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Student',
-        class: profile?.current_class || 0,
+        // resolveClassLevel falls back to education_level ('class_5' -> 5).
+        // null stays null so the UI can omit it rather than print "Class 0".
+        class: resolveClassLevel(profile),
         board: profile?.board_code || 'cbse',
         xp: stats?.total_xp || 0,
         streak: stats?.current_streak || 0,
@@ -143,10 +152,39 @@ export default function DashboardLayout({
     loadProfile();
   }, []);
 
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  /**
+   * Sign out reliably.
+   *
+   * The previous version was `await signOut(); router.push('/login')`, which
+   * failed in two ways:
+   *
+   *   1. router.push is a client-side navigation, so the authenticated
+   *      dashboard could stay rendered from the App Router cache — logout
+   *      looked like it had done nothing.
+   *   2. If signOut() threw (offline, network blip), the push still ran, and
+   *      middleware — seeing a still-valid session on an auth route — bounced
+   *      the user right back to the dashboard. Also indistinguishable from
+   *      "the logout button is broken".
+   *
+   * A full document load to /login drops every cached payload, and it runs in
+   * `finally` so a failed signOut still gets the student out of the authed UI.
+   * `replace` rather than `assign` so Back cannot re-enter the dashboard —
+   * this app runs on shared family devices.
+   */
   const handleLogout = async () => {
-    const supabase = createBrowserClient();
-    await supabase.auth.signOut();
-    router.push('/login');
+    if (loggingOut) return;                 // double-click fired two signOuts
+    setLoggingOut(true);
+    try {
+      const supabase = createBrowserClient();
+      await supabase.auth.signOut();
+    } catch {
+      // Deliberately swallowed — leaving the authed UI matters more than
+      // reporting why the token revocation failed.
+    } finally {
+      window.location.replace('/login');
+    }
   };
 
   return (
@@ -160,11 +198,11 @@ export default function DashboardLayout({
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 lg:translate-x-0 ${
+      <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 lg:translate-x-0 flex flex-col ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Logo */}
-        <div className="p-4 border-b border-gray-100">
+        <div className="p-4 border-b border-gray-100 shrink-0">
           <Link href="/dashboard" className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center text-xl shadow-lg">
               🧠
@@ -176,14 +214,18 @@ export default function DashboardLayout({
         </div>
 
         {/* User Info */}
-        <div className="p-4 border-b border-gray-100">
+        <div className="p-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-secondary-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
               {userProfile.name.charAt(0)}
             </div>
             <div>
               <p className="font-semibold text-gray-900">{userProfile.name}</p>
-              <p className="text-sm text-gray-500">Class {userProfile.class} · {userProfile.board === 'wb_board' ? 'WBBSE' : userProfile.board?.toUpperCase()}</p>
+                <p className="text-sm text-gray-500">
+                {[userProfile.class ? `Class ${userProfile.class}` : null, formatBoard(userProfile.board)]
+                  .filter(Boolean)
+                  .join(' · ') || 'Finish setup'}
+              </p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -199,7 +241,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Navigation — grouped into pillars, 'Start here' pinned open */}
-        <nav className="p-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+        <nav className="p-3 overflow-y-auto flex-1 min-h-0">
           {navGroups.map((group) => {
             const open = openGroups[group.label] ?? (group.pinned || false);
             return (
@@ -241,14 +283,19 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        {/* Language + Theme toggles (above bottom actions) */}
-        <div className="absolute bottom-[124px] left-0 right-0 px-4 space-y-2 border-t border-gray-100 pt-3">
+        {/* Language + Theme toggles.
+            These used to be `absolute bottom-[124px]` — a hardcoded offset that
+            assumed an exact footer height, so they floated ON TOP of the
+            scrolling nav (the language pill landed over "AI Guru", the theme
+            switch over "Courses"). In normal flow inside the flex column they
+            simply sit above the actions and the nav scrolls behind neither. */}
+        <div className="px-4 py-3 space-y-2 border-t border-gray-100 shrink-0">
           <LocaleSwitcher compact />
           <ThemeToggle />
         </div>
 
         {/* Bottom Actions */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
+        <div className="px-4 pt-2 pb-3 border-t border-gray-100 shrink-0">
           <Link
             href="/settings"
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all"
@@ -256,9 +303,14 @@ export default function DashboardLayout({
             <span className="text-xl">⚙️</span>
             <span>Settings</span>
           </Link>
-          <button type="button" onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all">
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
             <span className="text-xl" aria-hidden="true">🚪</span>
-            <span>Logout</span>
+            <span>{loggingOut ? 'Signing out…' : 'Logout'}</span>
           </button>
         </div>
       </aside>

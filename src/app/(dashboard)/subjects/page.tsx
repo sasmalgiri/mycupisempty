@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { createBrowserClient } from '@/lib/supabase';
+import { resolveClassLevel, formatBoard } from '@/lib/user-class';
+import { average } from '@/lib/safe-math';
 
 interface Subject {
   id: string;
@@ -16,89 +19,126 @@ interface Subject {
   accuracy: number;
 }
 
+/**
+ * Presentation for a subject slug. The curriculum schema stores slugs
+ * ('physical_science'), not display names or colours.
+ */
+const SUBJECT_STYLE: Record<string, { name: string; icon: string; color: string }> = {
+  math: { name: 'Mathematics', icon: '📐', color: 'from-indigo-500 to-purple-600' },
+  mathematics: { name: 'Mathematics', icon: '📐', color: 'from-indigo-500 to-purple-600' },
+  science: { name: 'Science', icon: '🔬', color: 'from-emerald-500 to-teal-600' },
+  physical_science: { name: 'Physical Science', icon: '⚗️', color: 'from-cyan-500 to-blue-600' },
+  life_science: { name: 'Life Science', icon: '🌿', color: 'from-green-500 to-emerald-600' },
+  physics: { name: 'Physics', icon: '🧲', color: 'from-blue-500 to-indigo-600' },
+  chemistry: { name: 'Chemistry', icon: '⚗️', color: 'from-cyan-500 to-sky-600' },
+  biology: { name: 'Biology', icon: '🧬', color: 'from-green-500 to-lime-600' },
+  history: { name: 'History', icon: '🏛️', color: 'from-amber-500 to-orange-600' },
+  geography: { name: 'Geography', icon: '🗺️', color: 'from-lime-500 to-green-600' },
+  english: { name: 'English', icon: '📖', color: 'from-rose-500 to-pink-600' },
+  bengali: { name: 'Bengali', icon: '📕', color: 'from-red-500 to-rose-600' },
+  hindi: { name: 'Hindi', icon: '📙', color: 'from-orange-500 to-amber-600' },
+  computer: { name: 'Computer', icon: '💻', color: 'from-slate-500 to-gray-700' },
+};
+
+function styleFor(slug: string) {
+  return (
+    SUBJECT_STYLE[slug] ?? {
+      name: slug.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      icon: '📚',
+      color: 'from-primary-500 to-secondary-500',
+    }
+  );
+}
+
 export default function SubjectsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userClass, setUserClass] = useState(6);
+  const [userClass, setUserClass] = useState<number | null>(null);
+  const [board, setBoard] = useState<string>('');
+  const [loadError, setLoadError] = useState(false);
+
+  const loadSubjects = useCallback(async (classLevel: number, boardCode: string) => {
+    // NOTE: `?class=` is a legacy branch reading migration-001 tables that no
+    // migration ever seeds — it always answered { subjects: [] }, and because
+    // [] is truthy the old mock fallback never fired. That empty list is what
+    // rendered "NaN%". `action=subjects` reads the curriculum schema that the
+    // syllabus is actually seeded into.
+    const res = await fetch(`/api/curriculum?action=subjects&classLevel=${classLevel}`);
+    if (!res.ok) throw new Error(`curriculum ${res.status}`);
+    const data = await res.json();
+    const rows: any[] = Array.isArray(data.subjects) ? data.subjects : [];
+
+    // One class has rows for several boards; showing all of them lists
+    // "Mathematics" three times.
+    const forBoard = boardCode ? rows.filter((r) => r.board_code === boardCode) : rows;
+    const chosen = forBoard.length > 0 ? forBoard : rows;
+
+    return chosen.map((r): Subject => {
+      const style = styleFor(r.subject_slug ?? '');
+      return {
+        id: r.id,
+        name: style.name,
+        icon: style.icon,
+        color: style.color,
+        // Per-student progress has no source table yet. Report zero rather
+        // than inventing a number — a fabricated 65% is worse than an honest 0.
+        progress: 0,
+        chaptersCompleted: 0,
+        totalChapters: r.total_chapters ?? 0,
+        nextChapter: 'Start the first chapter',
+        questionsAnswered: 0,
+        accuracy: 0,
+      };
+    });
+  }, []);
 
   useEffect(() => {
-    fetchSubjects();
-  }, [userClass]);
+    let cancelled = false;
 
-  const fetchSubjects = async () => {
-    try {
-      const res = await fetch(`/api/curriculum?class=${userClass}`);
-      const data = await res.json();
-      setSubjects(data.subjects || getMockSubjects());
-    } catch (error) {
-      setSubjects(getMockSubjects());
-    } finally {
-      setLoading(false);
-    }
-  };
+    (async () => {
+      try {
+        const supabase = createBrowserClient();
+        const { data: { user } } = await supabase.auth.getUser();
 
-  const getMockSubjects = (): Subject[] => [
-    {
-      id: 'mathematics',
-      name: 'Mathematics',
-      icon: '📐',
-      color: 'from-indigo-500 to-purple-600',
-      progress: 65,
-      chaptersCompleted: 6,
-      totalChapters: 10,
-      nextChapter: 'Fractions',
-      questionsAnswered: 156,
-      accuracy: 78
-    },
-    {
-      id: 'science',
-      name: 'Science',
-      icon: '🔬',
-      color: 'from-purple-500 to-pink-600',
-      progress: 48,
-      chaptersCompleted: 5,
-      totalChapters: 12,
-      nextChapter: 'Materials Around Us',
-      questionsAnswered: 98,
-      accuracy: 82
-    },
-    {
-      id: 'english',
-      name: 'English',
-      icon: '📖',
-      color: 'from-pink-500 to-rose-600',
-      progress: 72,
-      chaptersCompleted: 4,
-      totalChapters: 5,
-      nextChapter: 'The Unlikely Best Friends',
-      questionsAnswered: 87,
-      accuracy: 85
-    },
-    {
-      id: 'hindi',
-      name: 'Hindi',
-      icon: '📝',
-      color: 'from-orange-500 to-amber-600',
-      progress: 55,
-      chaptersCompleted: 3,
-      totalChapters: 5,
-      nextChapter: 'चांद से थोड़ी-सी गप्पें',
-      questionsAnswered: 64,
-      accuracy: 70
-    },
-    {
-      id: 'social-science',
-      name: 'Social Science',
-      icon: '🌍',
-      color: 'from-teal-500 to-cyan-600',
-      progress: 40,
-      chaptersCompleted: 2,
-      totalChapters: 5,
-      nextChapter: 'In the Earliest Cities',
-      questionsAnswered: 45,
-      accuracy: 75
-    }
-  ];
+        let classLevel: number | null = null;
+        let boardCode = '';
+
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('current_class, education_level, board_code')
+            .eq('id', user.id)
+            .single() as any;
+          classLevel = resolveClassLevel(profile);
+          boardCode = profile?.board_code ?? '';
+        }
+
+        if (cancelled) return;
+        setUserClass(classLevel);
+        setBoard(boardCode);
+
+        // No class on the profile means onboarding is incomplete — there is
+        // nothing sensible to fetch, and guessing a class (this page used to
+        // hard-code 6) shows a child someone else's syllabus.
+        if (classLevel === null) {
+          setSubjects([]);
+          return;
+        }
+
+        const loaded = await loadSubjects(classLevel, boardCode);
+        if (!cancelled) setSubjects(loaded);
+      } catch {
+        if (!cancelled) {
+          setSubjects([]);
+          setLoadError(true);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [loadSubjects]);
 
   if (loading) {
     return (
@@ -111,9 +151,11 @@ export default function SubjectsPage() {
     );
   }
 
-  const overallProgress = Math.round(
-    subjects.reduce((sum, s) => sum + s.progress, 0) / subjects.length
-  );
+  const overallProgress = average(subjects.map((s) => s.progress));
+  const averageAccuracy = average(subjects.map((s) => s.accuracy));
+  const chaptersCompleted = subjects.reduce((sum, s) => sum + s.chaptersCompleted, 0);
+  const questionsAnswered = subjects.reduce((sum, s) => sum + s.questionsAnswered, 0);
+  const classLabel = userClass ? `Class ${userClass}` : 'Class not set';
 
   return (
     <div className="min-h-screen">
@@ -123,11 +165,13 @@ export default function SubjectsPage() {
           <div className="flex items-center justify-between h-16">
             <h1 className="text-xl font-bold text-gray-900">My Subjects</h1>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">Class {userClass}</span>
+              <span className="text-sm text-gray-600">
+                {[classLabel, formatBoard(board)].filter(Boolean).join(' · ')}
+              </span>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500">Overall Progress:</span>
                 <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-gradient-to-r from-primary-500 to-secondary-500"
                     style={{ width: `${overallProgress}%` }}
                   />
@@ -146,7 +190,7 @@ export default function SubjectsPage() {
           <div className="relative z-10">
             <h2 className="text-2xl font-bold mb-2">📚 Your Learning Journey</h2>
             <p className="text-white/90 mb-4">
-              Class {userClass} • {subjects.reduce((sum, s) => sum + s.chaptersCompleted, 0)} chapters completed
+              {classLabel} • {chaptersCompleted} chapters completed
             </p>
             <div className="flex items-center gap-6">
               <div>
@@ -154,16 +198,54 @@ export default function SubjectsPage() {
                 <p className="text-sm text-white/80">Overall Progress</p>
               </div>
               <div>
-                <p className="text-3xl font-bold">{subjects.reduce((sum, s) => sum + s.questionsAnswered, 0)}</p>
+                <p className="text-3xl font-bold">{questionsAnswered}</p>
                 <p className="text-sm text-white/80">Questions Solved</p>
               </div>
               <div>
-                <p className="text-3xl font-bold">{Math.round(subjects.reduce((sum, s) => sum + s.accuracy, 0) / subjects.length)}%</p>
+                <p className="text-3xl font-bold">{averageAccuracy}%</p>
                 <p className="text-sm text-white/80">Avg. Accuracy</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Empty state — an empty grid with 0% tiles reads as a broken page. */}
+        {subjects.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-md p-10 text-center">
+            <div className="text-5xl mb-4">🧭</div>
+            {userClass === null ? (
+              <>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Let&apos;s set up your class first</h3>
+                <p className="text-gray-500 mb-6">
+                  We need to know which class you&apos;re in before we can show your syllabus.
+                </p>
+                <Link
+                  href="/settings"
+                  className="inline-block px-5 py-3 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors"
+                >
+                  Complete my profile
+                </Link>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  {loadError ? 'Could not load your subjects' : `No subjects yet for ${classLabel}`}
+                </h3>
+                <p className="text-gray-500 mb-6">
+                  {loadError
+                    ? 'Something went wrong fetching your syllabus. Please try again.'
+                    : `We haven't added the ${[formatBoard(board), classLabel].filter(Boolean).join(' ')} syllabus yet. Browse the full course catalogue in the meantime.`}
+                </p>
+                <Link
+                  href="/courses"
+                  className="inline-block px-5 py-3 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors"
+                >
+                  Browse courses
+                </Link>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Subjects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -175,7 +257,7 @@ export default function SubjectsPage() {
             >
               {/* Gradient Top Bar */}
               <div className={`h-2 bg-gradient-to-r ${subject.color}`} />
-              
+
               <div className="p-6">
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
@@ -188,7 +270,9 @@ export default function SubjectsPage() {
                         {subject.name}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {subject.chaptersCompleted}/{subject.totalChapters} chapters
+                        {subject.totalChapters > 0
+                          ? `${subject.chaptersCompleted}/${subject.totalChapters} chapters`
+                          : 'Chapters coming soon'}
                       </p>
                     </div>
                   </div>
@@ -204,7 +288,7 @@ export default function SubjectsPage() {
                     <span className="font-bold text-gray-700">{subject.progress}%</span>
                   </div>
                   <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className={`h-full bg-gradient-to-r ${subject.color} rounded-full transition-all duration-500`}
                       style={{ width: `${subject.progress}%` }}
                     />
@@ -246,7 +330,7 @@ export default function SubjectsPage() {
               <p className="text-sm text-gray-500">Discover how you learn best</p>
             </div>
           </Link>
-          
+
           <Link href="/progress" className="bg-white rounded-xl p-5 shadow-md hover:shadow-lg transition-shadow flex items-center gap-4">
             <div className="w-12 h-12 bg-success-100 rounded-xl flex items-center justify-center text-2xl">
               📊
@@ -256,7 +340,7 @@ export default function SubjectsPage() {
               <p className="text-sm text-gray-500">See your learning analytics</p>
             </div>
           </Link>
-          
+
           <Link href="/achievements" className="bg-white rounded-xl p-5 shadow-md hover:shadow-lg transition-shadow flex items-center gap-4">
             <div className="w-12 h-12 bg-warning-100 rounded-xl flex items-center justify-center text-2xl">
               🏆

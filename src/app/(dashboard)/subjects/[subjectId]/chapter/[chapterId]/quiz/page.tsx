@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { percent } from '@/lib/safe-math';
 
 interface Question {
   id: string;
@@ -248,7 +249,7 @@ export default function QuizPage() {
   }
 
   if (quizState.isComplete) {
-    const percentage = Math.round((quizState.score / questions.length) * 100);
+    const percentage = percent(quizState.score, questions.length);
     const grade = percentage >= 90 ? 'A+' : percentage >= 80 ? 'A' : percentage >= 70 ? 'B' : percentage >= 60 ? 'C' : 'D';
     
     return (
@@ -376,7 +377,7 @@ export default function QuizPage() {
             <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 transition-all duration-300"
-                style={{ width: `${((quizState.currentIndex + 1) / questions.length) * 100}%` }}
+                style={{ width: `${percent(quizState.currentIndex + 1, questions.length)}%` }}
               />
             </div>
             <span className="text-sm font-medium text-gray-600">

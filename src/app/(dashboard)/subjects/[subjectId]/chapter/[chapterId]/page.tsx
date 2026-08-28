@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { percent } from '@/lib/safe-math';
 import RichContent from '@/components/RichContent';
 import ChapterTricksSlot from '@/components/ChapterTricksSlot';
 import ConceptSheetView from '@/components/ConceptSheetView';
@@ -402,7 +403,7 @@ To divide fractions, multiply by the **reciprocal** (flip the second fraction)!
 
   const currentTopic = chapter.topics.find(t => t.id === activeTopic);
   const completedCount = chapter.topics.filter(t => t.completed).length;
-  const progress = Math.round((completedCount / chapter.topics.length) * 100);
+  const progress = percent(completedCount, chapter.topics.length);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-primary-50 to-secondary-50">
